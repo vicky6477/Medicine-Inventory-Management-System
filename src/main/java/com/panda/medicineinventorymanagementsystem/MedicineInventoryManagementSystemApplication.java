@@ -1,4 +1,4 @@
-package com.panda.spirngdata.medicineinventorymanagementsystem;
+package com.panda.medicineinventorymanagementsystem;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

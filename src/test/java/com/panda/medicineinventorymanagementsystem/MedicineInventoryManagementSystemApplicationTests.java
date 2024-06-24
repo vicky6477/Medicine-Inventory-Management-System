@@ -1,4 +1,4 @@
-package com.panda.spirngdata.medicineinventorymanagementsystem;
+package com.panda.medicineinventorymanagementsystem;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
