@@ -32,7 +32,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public User updateUser(@PathVariable Long id, @RequestBody User user) {
+    public User updateUser(@PathVariable Integer id, @RequestBody User user) {
         user.setId(id);
         return userService.updateUser(user);
     }
@@ -42,8 +42,4 @@ public class UserController {
         userService.deleteUserById(id);
     }
 
-    @PatchMapping("/{id}/role")
-    public User updateUserRole(@PathVariable Long id, @RequestParam Role role) {
-        return userService.updateUserRole(id, role);
-    }
 }
