@@ -3,8 +3,11 @@ package com.panda.medicineinventorymanagementsystem.services;
 import com.panda.medicineinventorymanagementsystem.entity.Role;
 import com.panda.medicineinventorymanagementsystem.entity.User;
 import com.panda.medicineinventorymanagementsystem.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 
 import java.util.List;
 
@@ -17,7 +20,7 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
-    public User createUser(User user)  {
+    public User createUser(User user) {
         return userRepository.save(user);
     }
 
@@ -38,9 +41,4 @@ public class UserService {
         return true;
     }
 
-    public User updateUserRole(Long id, Role role) {
-        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        user.setRole(role);
-        return userRepository.save(user);
-    }
 }
