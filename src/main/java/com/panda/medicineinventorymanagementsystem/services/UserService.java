@@ -24,7 +24,7 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    public User getUserById(Long id) {
+    public User getUserById(Integer id) {
         return userRepository.findById(id).orElseThrow(() -> new RuntimeException("id not found"));
     }
 
@@ -36,7 +36,7 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    public Boolean deleteUserById(Long id) {
+    public Boolean deleteUserById(Integer id) {
         userRepository.deleteById(id);
         return true;
     }
