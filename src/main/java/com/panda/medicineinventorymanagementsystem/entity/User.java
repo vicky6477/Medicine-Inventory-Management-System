@@ -34,7 +34,7 @@ public class User {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-//    @Column(nullable = false)
+    @Column(nullable = false)
     private LocalDateTime updatedAt;
 
     @Column(nullable = false)
@@ -45,6 +45,7 @@ public class User {
 
     @Column(nullable = false)
     private String gender;
+
 
     @PrePersist
     protected void onCreate() {

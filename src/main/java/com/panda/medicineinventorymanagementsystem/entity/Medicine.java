@@ -19,7 +19,7 @@ public class Medicine {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
+    @Column(length = 1000, nullable = false)
     private String description;
 
     @Column(nullable = false)
