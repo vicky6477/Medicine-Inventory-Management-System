@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:latest
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: Medicine_Inventory_Management_System
+      MYSQL_USER: vicky
+      MYSQL_PASSWORD: vicky
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql:/var/lib/mysql
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/Medicine_Inventory_Management_System
+      SPRING_DATASOURCE_USERNAME: vicky
+      SPRING_DATASOURCE_PASSWORD: vicky
+    depends_on:
+      - mysql
+
+volumes:
+  mysql:

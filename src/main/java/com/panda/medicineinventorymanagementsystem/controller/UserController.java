@@ -3,6 +3,7 @@ import com.panda.medicineinventorymanagementsystem.entity.Role;
 import com.panda.medicineinventorymanagementsystem.entity.User;
 import com.panda.medicineinventorymanagementsystem.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,33 +14,40 @@ public class UserController {
     private final UserService userService;
 
     @Autowired
-    public UserController(UserService userService) {
+    public  UserController(UserService userService) {
         this.userService = userService;
     }
+    /*
+    * ResponseEntity:
+    *        fully control the HTTP response for RESTful services
+    *        specify the status code, headers, and body directly from service methods,
+    *        enhancing API flexibility and clarity in handling different HTTP responses efficiently
+    * */
     @PostMapping
-    public User createUser(@RequestBody User user) {
-        return userService.createUser(user);
+    public ResponseEntity<User> createUser(@RequestBody User user) {
+        return ResponseEntity.ok(userService.createUser(user));
     }
 
     @GetMapping("/{id}")
-    public User getUserById(@PathVariable Integer id) {
-        return userService.getUserById(id);
+    public ResponseEntity<User> getUserById(@PathVariable Integer id) {
+        return ResponseEntity.ok(userService.getUserById(id));
     }
 
     @GetMapping
-    public List<User> getAllUsers() {
-        return userService.getAllUsers();
+    public ResponseEntity<List<User>> getAllUsers() {
+        List<User> users = userService.getAllUsers();
+        return ResponseEntity.ok(users); 
     }
 
     @PutMapping("/{id}")
-    public User updateUser(@PathVariable Integer id, @RequestBody User user) {
+    public ResponseEntity<User> updateUser(@PathVariable Integer id, @RequestBody User user) {
         user.setId(id);
-        return userService.updateUser(user);
+        return ResponseEntity.ok(userService.updateUser(user));
     }
 
     @DeleteMapping("/{id}")
-    public void deleteUser(@PathVariable Integer id) {
-        userService.deleteUserById(id);
+    public ResponseEntity<Boolean>  deleteUser(@PathVariable Integer id) {
+        return ResponseEntity.ok(userService.deleteUserById(id));
     }
 
 }
