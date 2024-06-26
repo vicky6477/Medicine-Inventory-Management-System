@@ -17,7 +17,7 @@ services:
   app:
     build: .
     ports:
-      - "8080:8080"
+      - "8080:9090"
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/Medicine_Inventory_Management_System
       SPRING_DATASOURCE_USERNAME: vicky
