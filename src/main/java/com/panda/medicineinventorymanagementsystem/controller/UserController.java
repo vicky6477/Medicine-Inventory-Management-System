@@ -23,6 +23,7 @@ public class UserController {
     *        specify the status code, headers, and body directly from service methods,
     *        enhancing API flexibility and clarity in handling different HTTP responses efficiently
     * */
+
     @PostMapping
     public ResponseEntity<User> createUser(@RequestBody User user) {
         return ResponseEntity.ok(userService.createUser(user));
@@ -42,7 +43,7 @@ public class UserController {
     @PutMapping("/{id}")
     public ResponseEntity<User> updateUser(@PathVariable Integer id, @RequestBody User user) {
         user.setId(id);
-        return ResponseEntity.ok(userService.updateUser(user));
+        return ResponseEntity.ok(userService.updateUser(id, user));
     }
 
     @DeleteMapping("/{id}")
