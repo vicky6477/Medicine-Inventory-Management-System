@@ -5,29 +5,28 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
+
 @Entity
-@Table(name = "medicines")
+@Table(name = "Outbound_Transaction")
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
-public class Medicine {
+public class OutboundTransaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-
-    @Column
     private Integer id;
 
-    @Column(nullable = false)
-    private String name;
-
-    @Column(length = 1000, nullable = false)
-    private String description;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "medicine_id", nullable = false)
+    private Medicine medicine;
 
     @Column(nullable = false)
     private Integer quantity;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Type type;
+    @Column(name = "received_date", nullable = false)
+    private Date receivedDate;
 
+    @Column(nullable = false)
+    private String supplier;
 }

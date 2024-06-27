@@ -26,8 +26,8 @@ public class MedicineController {
     }
 
     @GetMapping
-    public Page<Medicine> getAllMedicines(Pageable pageable) {
-        return medicineService.findAllMedicines(pageable);
+    public ResponseEntity<Page<Medicine>> getAllMedicines(Pageable pageable) {
+        return ResponseEntity.ok(medicineService.findAllMedicines(pageable));
     }
 
     @PutMapping("/{id}")
