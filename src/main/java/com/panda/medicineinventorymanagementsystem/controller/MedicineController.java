@@ -4,6 +4,7 @@ import com.panda.medicineinventorymanagementsystem.entity.Medicine;
 import com.panda.medicineinventorymanagementsystem.entity.OutboundTransaction;
 import com.panda.medicineinventorymanagementsystem.services.MedicineService;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Pageable;
@@ -40,23 +41,14 @@ public class MedicineController {
         return ResponseEntity.ok(updatedMedicine);
     }
 
-    @PostMapping("/inbound/transactions")
-    public ResponseEntity<List<Medicine>> addInboundTransactions(@RequestBody List<InboundTransaction> transactions) {
-        return ResponseEntity.ok(medicineService.addInboundTransactions(transactions));
-    }
 
-    @GetMapping("/inbound/transactions")
-    public ResponseEntity<Page<InboundTransaction>> getAllInboundTransactions(Pageable pageable) {
-        return ResponseEntity.ok(medicineService.getAllInboundTransactions(pageable));
-    }
-
-    @PostMapping("/outbound/transactions")
-    public ResponseEntity<List<Medicine>> addOutboundTransactions(@RequestBody List<OutboundTransaction> transactions) {
-        return ResponseEntity.ok(medicineService.addOutboundTransactions(transactions));
-    }
-
-    @GetMapping("/outbound/transactions")
-    public ResponseEntity<Page<OutboundTransaction>> getAllOutboundTransactions(Pageable pageable) {
-        return ResponseEntity.ok(medicineService.getAllOutboundTransactions(pageable));
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteMedicine(@PathVariable Integer id) {
+        try {
+            medicineService.deleteMedicine(id);
+            return ResponseEntity.ok("Medicine deleted successfully.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
     }
 }

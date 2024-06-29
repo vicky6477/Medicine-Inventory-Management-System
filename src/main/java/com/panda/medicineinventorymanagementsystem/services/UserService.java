@@ -43,11 +43,11 @@ public class UserService {
         user.setPassword(userDetails.getPassword());
         return userRepository.save(user);
     }
+
     //delete a user by ID
     public Boolean deleteUserById(Integer id) {
         userRepository.deleteById(id);
         return !userRepository.existsById(id);
     }
-
 
 }
