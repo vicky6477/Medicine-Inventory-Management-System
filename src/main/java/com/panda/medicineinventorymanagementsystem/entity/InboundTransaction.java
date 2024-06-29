@@ -24,6 +24,12 @@ public class InboundTransaction {
     @Column(nullable = false)
     private Integer quantity;
 
+    @Column(nullable = false)
+    private Integer originalMedicineQuantity;
+
+    @Column(nullable = false)
+    private Integer updateTransactionQuantity;
+
     @Column(name = "received_date", nullable = false)
     private Date receivedDate;
 
