@@ -20,10 +20,10 @@ public class Medicine {
     @Column(nullable = false)
     private String name;
 
-    @Column(length = 1000, nullable = false)
+    @Column(length = 1000)
     private String description;
 
-    @Column(nullable = false)
+    @Column
     private Integer quantity;
 
     @Enumerated(EnumType.STRING)

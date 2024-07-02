@@ -35,4 +35,9 @@ public class InboundTransaction {
 
     @Column(nullable = false)
     private String supplier;
+
+    @PrePersist
+    protected void onCreate() {
+        receivedDate = new Date();
+    }
 }

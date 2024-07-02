@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface InboundTransactionRepository  extends JpaRepository<InboundTransaction,Integer> {
+    boolean existsByMedicineId(Integer medicineId);
 }

@@ -2,8 +2,11 @@ package com.panda.medicineinventorymanagementsystem.controller;
 import com.panda.medicineinventorymanagementsystem.entity.Role;
 import com.panda.medicineinventorymanagementsystem.entity.User;
 import com.panda.medicineinventorymanagementsystem.services.UserService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,7 +28,13 @@ public class UserController {
     * */
 
     @PostMapping
-    public ResponseEntity<User> createUser(@RequestBody User user) {
+    public ResponseEntity<User> createUser(@Valid @RequestBody User user, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            for (FieldError error : bindingResult.getFieldErrors()) {
+                System.out.println(error.getField() + " - " + error.getRejectedValue());
+            }
+            throw new RuntimeException("Bad Request!");
+        }
         return ResponseEntity.ok(userService.createUser(user));
     }
 

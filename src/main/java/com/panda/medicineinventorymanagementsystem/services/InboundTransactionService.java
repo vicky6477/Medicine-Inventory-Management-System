@@ -30,7 +30,7 @@ public class InboundTransactionService {
     @Autowired
     private EntityManager entityManager;
 
-    /*  @Transactional
+    @Transactional
     public List<InboundTransaction> addInboundTransactions(List<InboundTransaction> transactions) {
         // Collect all medicine IDs from the transactions
         Set<Integer> medicineIds = transactions.stream()
@@ -61,9 +61,9 @@ public class InboundTransactionService {
 
         // Save and return all transactions
         return inboundTransactionRepository.saveAll(transactions);
-    }*/
+    }
 
-    @Transactional
+   /* @Transactional
     public List<InboundTransaction> addInboundTransactions(List<InboundTransaction> transactions) {
         if (transactions.isEmpty()) {
             return Collections.emptyList();
@@ -110,7 +110,7 @@ public class InboundTransactionService {
 
         // Save and return all transactions
         return inboundTransactionRepository.saveAll(transactions);
-    }
+    }*/
 
 
     //Retrieve all transactions
