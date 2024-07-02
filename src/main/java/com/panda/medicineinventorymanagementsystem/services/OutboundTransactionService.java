@@ -33,7 +33,7 @@ public class OutboundTransactionService {
     private EntityManager entityManager;
 
     //Create medicines outbound transactions
- /*   @Transactional
+    @Transactional
     public List<OutboundTransaction> addOutboundTransactions(List<OutboundTransaction> transactions) {
         // Collect all medicine IDs from the transactions for batch fetching
         Set<Integer> medicineIds = transactions.stream()
@@ -66,9 +66,9 @@ public class OutboundTransactionService {
 
         // Save all transactions to the database in a batch operation and return them
         return outboundTransactionRepository.saveAll(transactions);
-    }*/
+    }
 
-    @Transactional
+    /*@Transactional
     public List<OutboundTransaction> addOutboundTransactions(List<OutboundTransaction> transactions) {
         // Collect all medicine IDs from the transactions
         Set<Integer> medicineIds = transactions.stream()
@@ -114,7 +114,7 @@ public class OutboundTransactionService {
         // Ensure all transactions have their required fields set before saving
         return outboundTransactionRepository.saveAll(transactions);
     }
-
+*/
 
 
     //Retrieve all outbound transactions

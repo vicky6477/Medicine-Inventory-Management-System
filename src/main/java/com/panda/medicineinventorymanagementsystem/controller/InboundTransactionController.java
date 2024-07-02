@@ -23,10 +23,6 @@ public class InboundTransactionController {
         this.inboundTransactionService = inboundTransactionService;
     }
 
-  /*  @PostMapping
-    public ResponseEntity<List<Medicine>> addInboundTransactions(@RequestBody List<InboundTransaction> transactions) {
-        return ResponseEntity.ok(inboundTransactionService.addInboundTransactions(transactions));
-    }*/
 
     @PostMapping
     public ResponseEntity<List<InboundTransaction>> createInboundTransactions(@RequestBody List<InboundTransaction> transactions) {

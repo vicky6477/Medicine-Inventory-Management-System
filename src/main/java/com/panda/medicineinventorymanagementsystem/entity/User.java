@@ -1,7 +1,12 @@
 package com.panda.medicineinventorymanagementsystem.entity;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -11,35 +16,27 @@ import java.time.LocalDateTime;
 @Table(name = "users")
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 @Data
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
 
-    @Column
+    @NotEmpty // make sure string or ds has content
+    private String name;
     private Integer id;
-
-    @Column(nullable = false)
+    @NotBlank// applies to String, make sure it's more than white space
     private String username;
-
-    @Column(nullable = false)
+    @Email
     private String email;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
-
-    @Column(nullable = false)
     private String password;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    @Column(nullable = false)
     private LocalDateTime updatedAt;
-
-    @Column(nullable = false)
-    private String name;
 
     @Column(nullable = false)
     private Integer age;
@@ -47,18 +44,17 @@ public class User {
     @Column(nullable = false)
     private String gender;
 
-
     @PrePersist
     protected void onCreate() {
-        if (this.createdAt == null) {  // Set createdAt only if it's not already set
+        if (this.createdAt == null) {
             this.createdAt = LocalDateTime.now();
         }
-        this.updatedAt = LocalDateTime.now();  // Initialize updatedAt at creation time as well
+        this.updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
-
 }
+
