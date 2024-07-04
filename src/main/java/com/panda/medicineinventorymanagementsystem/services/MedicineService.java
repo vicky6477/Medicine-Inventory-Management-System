@@ -1,11 +1,13 @@
 package com.panda.medicineinventorymanagementsystem.services;
 
 import com.panda.medicineinventorymanagementsystem.entity.Medicine;
-import com.panda.medicineinventorymanagementsystem.entity.Type;
 import com.panda.medicineinventorymanagementsystem.repository.InboundTransactionRepository;
 import com.panda.medicineinventorymanagementsystem.repository.MedicineRepository;
 import com.panda.medicineinventorymanagementsystem.repository.OutboundTransactionRepository;
 import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
@@ -33,11 +35,13 @@ public class MedicineService {
     }
 
     @Transactional
-    public Medicine createOrFetchMedicine(String name, Medicine inputMedicine) {
+    public Medicine createOrFetchMedicine(String name, @Valid Medicine inputMedicine) {
+        Logger logger = LoggerFactory.getLogger(MedicineService.class);
+
         // Check if a medicine with the same name already exists in the database
+        logger.info("Checking if medicine with name '{}' already exists in the database.", name);
         Optional<Medicine> existingMedicine = medicineRepository.findByName(name);
         if (existingMedicine.isPresent()) {
-            // If the medicine already exists, throw an exception or return an error message
             throw new IllegalStateException("Medicine with name '" + name + "' already exists");
         }
 
@@ -48,39 +52,34 @@ public class MedicineService {
         if (inputMedicine.getDescription() == null) {
             inputMedicine.setDescription("Default description"); // Default description
         }
-        if (inputMedicine.getType() == null) {
-            inputMedicine.setType(Type.OTHER); // Default type
-        }
 
-        // Fetch medicine data from the API, if it fails, use the input medicine data
-        return openFDAApiService.fetchMedicineData(name, inputMedicine).map(apiMedicine -> {
-            // Supplement missing information from the API data
-            if (apiMedicine.getDescription() == null || apiMedicine.getDescription().isEmpty()) {
+        // Fetch medicine data from the API
+        logger.info("Fetching data from API for medicine '{}'.", name);
+        Optional<Medicine> fetchedMedicine = openFDAApiService.fetchMedicineData(name, inputMedicine);
+        if (fetchedMedicine.isPresent()) {
+            Medicine apiMedicine = fetchedMedicine.get();
+
+            if (apiMedicine.getDescription().isEmpty()) {
                 apiMedicine.setDescription(inputMedicine.getDescription());
             }
-            if (apiMedicine.getType() == null) {
-                apiMedicine.setType(inputMedicine.getType());
-            }
-            apiMedicine.setName(name);  // Ensure the medicine name is set
+            apiMedicine.setName(name);
             return medicineRepository.save(apiMedicine);
-        }).orElseGet(() -> medicineRepository.save(inputMedicine));
+        } else {
+            return medicineRepository.save(inputMedicine);
+        }
     }
-
-
-
 
     //Retrieve a medicine by its ID.
-    public Medicine getMedicineById(Integer id) {
-        return medicineRepository.findById(id).orElseThrow(() -> new RuntimeException("id not found"));
+    public Optional<Medicine> getMedicineById(Integer id) {
+        return medicineRepository.findById(id);
     }
-
     //Retrieve all medicines, with the ability to paginate the results.
     public Page<Medicine> findAllMedicines(Pageable pageable) {
         return medicineRepository.findAll(pageable);
     }
 
-    //Updates the details of an existing medicine
-    public Medicine updateMedicine(Integer id, Medicine medicineDetails) {
+/*    Updates the details of an existing medicine
+    public Medicine updateMedicineById(Integer id, Medicine medicineDetails) {
         //Retrieve the medicine by its id, if medicine does not exit, throw exception
         Medicine medicine = medicineRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Medicine not found"));
@@ -89,7 +88,19 @@ public class MedicineService {
         medicine.setQuantity(medicineDetails.getQuantity());
         medicine.setType(medicineDetails.getType());
         return medicineRepository.save(medicine);
+    }*/
+
+    public Optional<Medicine> updateMedicineById(Integer id, @Valid Medicine medicineDetails) {
+        return medicineRepository.findById(id)
+                .map(existingMedicine -> {
+                    existingMedicine.setName(medicineDetails.getName());
+                    existingMedicine.setDescription(medicineDetails.getDescription());
+                    existingMedicine.setQuantity(medicineDetails.getQuantity());
+                    existingMedicine.setType(medicineDetails.getType());
+                    return medicineRepository.save(existingMedicine);
+                });
     }
+
 
     //delete an existing medicine by id
     @Transactional
