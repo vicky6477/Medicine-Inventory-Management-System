@@ -1,6 +1,8 @@
 package com.panda.medicineinventorymanagementsystem.services;
 
 import com.panda.medicineinventorymanagementsystem.entity.Medicine;
+import com.panda.medicineinventorymanagementsystem.dto.MedicineDTO;
+import com.panda.medicineinventorymanagementsystem.entity.Type;
 import com.panda.medicineinventorymanagementsystem.repository.InboundTransactionRepository;
 import com.panda.medicineinventorymanagementsystem.repository.MedicineRepository;
 import com.panda.medicineinventorymanagementsystem.repository.OutboundTransactionRepository;
@@ -10,14 +12,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
-
 @Service
 public class MedicineService {
+    private static final Logger logger = LoggerFactory.getLogger(MedicineService.class);
     private final MedicineRepository medicineRepository;
     private final OpenFDAApiService openFDAApiService;
     private final InboundTransactionRepository inboundTransactionRepository;
@@ -35,86 +37,94 @@ public class MedicineService {
     }
 
     @Transactional
-    public Medicine createOrFetchMedicine(String name, @Valid Medicine inputMedicine) {
-        Logger logger = LoggerFactory.getLogger(MedicineService.class);
-
-        // Check if a medicine with the same name already exists in the database
-        logger.info("Checking if medicine with name '{}' already exists in the database.", name);
-        Optional<Medicine> existingMedicine = medicineRepository.findByName(name);
-        if (existingMedicine.isPresent()) {
+    public MedicineDTO createOrFetchMedicine(String name, MedicineDTO inputMedicineDTO) {
+        logger.info("Attempting to create or fetch medicine: {}", name);
+        if (medicineRepository.findByName(name).isPresent()) {
+            logger.error("Creation failed: Medicine with name '{}' already exists.", name);
             throw new IllegalStateException("Medicine with name '" + name + "' already exists");
         }
 
         // Set default values for properties not set
-        if (inputMedicine.getQuantity() == null) {
-            inputMedicine.setQuantity(0); // Default quantity
+        if (inputMedicineDTO.getQuantity() == null) {
+            inputMedicineDTO.setQuantity(0); // Default quantity
         }
-        if (inputMedicine.getDescription() == null) {
-            inputMedicine.setDescription("Default description"); // Default description
+        if (inputMedicineDTO.getDescription() == null) {
+            inputMedicineDTO.setDescription("Default description"); // Default description
         }
 
-        // Fetch medicine data from the API
-        logger.info("Fetching data from API for medicine '{}'.", name);
-        Optional<Medicine> fetchedMedicine = openFDAApiService.fetchMedicineData(name, inputMedicine);
-        if (fetchedMedicine.isPresent()) {
-            Medicine apiMedicine = fetchedMedicine.get();
+        Optional<MedicineDTO> fetchedMedicineDTO = openFDAApiService.fetchMedicineData(name, inputMedicineDTO);
+        fetchedMedicineDTO.ifPresentOrElse(
+                dto -> logger.info("Data fetched from FDA for medicine: {}", name),
+                () -> logger.info("No data fetched from FDA, using default data for medicine: {}", name)
+        );
 
-            if (apiMedicine.getDescription().isEmpty()) {
-                apiMedicine.setDescription(inputMedicine.getDescription());
-            }
-            apiMedicine.setName(name);
-            return medicineRepository.save(apiMedicine);
-        } else {
-            return medicineRepository.save(inputMedicine);
-        }
+        Medicine medicine = convertToEntity(fetchedMedicineDTO.orElse(inputMedicineDTO));
+        medicineRepository.save(medicine);
+        logger.info("Medicine created or fetched successfully with ID: {}", medicine.getId());
+        return convertToDTO(medicine);
     }
 
-    //Retrieve a medicine by its ID.
-    public Optional<Medicine> getMedicineById(Integer id) {
-        return medicineRepository.findById(id);
-    }
-    //Retrieve all medicines, with the ability to paginate the results.
-    public Page<Medicine> findAllMedicines(Pageable pageable) {
-        return medicineRepository.findAll(pageable);
+    public Optional<MedicineDTO> getMedicineById(Integer id) {
+        logger.info("Retrieving medicine by ID: {}", id);
+        return medicineRepository.findById(id).map(this::convertToDTO);
     }
 
-/*    Updates the details of an existing medicine
-    public Medicine updateMedicineById(Integer id, Medicine medicineDetails) {
-        //Retrieve the medicine by its id, if medicine does not exit, throw exception
-        Medicine medicine = medicineRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Medicine not found"));
-        medicine.setName(medicineDetails.getName());
-        medicine.setDescription(medicineDetails.getDescription());
-        medicine.setQuantity(medicineDetails.getQuantity());
-        medicine.setType(medicineDetails.getType());
-        return medicineRepository.save(medicine);
-    }*/
-
-    public Optional<Medicine> updateMedicineById(Integer id, @Valid Medicine medicineDetails) {
-        return medicineRepository.findById(id)
-                .map(existingMedicine -> {
-                    existingMedicine.setName(medicineDetails.getName());
-                    existingMedicine.setDescription(medicineDetails.getDescription());
-                    existingMedicine.setQuantity(medicineDetails.getQuantity());
-                    existingMedicine.setType(medicineDetails.getType());
-                    return medicineRepository.save(existingMedicine);
-                });
+    public Page<MedicineDTO> findAllMedicines(Pageable pageable) {
+        logger.info("Retrieving all medicines with pagination");
+        return medicineRepository.findAll(pageable).map(this::convertToDTO);
     }
 
+    @Transactional
+    public Optional<MedicineDTO> updateMedicineById(Integer id, @Valid MedicineDTO medicineDetailsDTO) {
+        logger.info("Updating medicine ID: {}", id);
+        return medicineRepository.findById(id).map(existingMedicine -> {
+            updateEntity(existingMedicine, medicineDetailsDTO);
+            Medicine updatedMedicine = medicineRepository.save(existingMedicine);
+            logger.info("Medicine updated successfully with ID: {}", updatedMedicine.getId());
+            return convertToDTO(updatedMedicine);
+        });
+    }
 
-    //delete an existing medicine by id
     @Transactional
     public void deleteMedicine(Integer id) {
-        // Check for existing inbound and outbound transactions related to the medicine
+        logger.info("Attempting to delete medicine ID: {}", id);
         boolean existsInbound = inboundTransactionRepository.existsByMedicineId(id);
         boolean existsOutbound = outboundTransactionRepository.existsByMedicineId(id);
         if (existsInbound || existsOutbound) {
-            throw new IllegalStateException("Cannot delete medicine with ID: " + id +
-                    " because there are existing related transactions.");
+            logger.error("Deletion failed: Medicine with ID: {} has existing related transactions.", id);
+            throw new IllegalStateException("Cannot delete medicine with ID: " + id + " because there are existing related transactions.");
         }
+        medicineRepository.deleteById(id);
+        logger.info("Medicine deleted successfully with ID: {}", id);
+    }
 
-        Medicine medicine = medicineRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Medicine not found with ID: " + id));
-        medicineRepository.delete(medicine);
+    private MedicineDTO convertToDTO(Medicine medicine) {
+        logger.debug("Converting Medicine to MedicineDTO with ID: {}", medicine.getId());
+        MedicineDTO dto = new MedicineDTO();
+        dto.setId(medicine.getId());
+        dto.setName(medicine.getName());
+        dto.setDescription(medicine.getDescription());
+        dto.setQuantity(medicine.getQuantity());
+        dto.setType(medicine.getType().name());
+        return dto;
+    }
+
+    private Medicine convertToEntity(MedicineDTO dto) {
+        logger.debug("Converting MedicineDTO to Medicine with ID: {}", dto.getId());
+        Medicine medicine = new Medicine();
+        medicine.setId(dto.getId());
+        medicine.setName(dto.getName());
+        medicine.setDescription(dto.getDescription());
+        medicine.setQuantity(dto.getQuantity());
+        medicine.setType(Enum.valueOf(Type.class, dto.getType()));
+        return medicine;
+    }
+
+    private void updateEntity(Medicine medicine, MedicineDTO dto) {
+        logger.debug("Updating entity from DTO for ID: {}", dto.getId());
+        if (dto.getName() != null) medicine.setName(dto.getName());
+        if (dto.getDescription() != null) medicine.setDescription(dto.getDescription());
+        if (dto.getQuantity() != null) medicine.setQuantity(dto.getQuantity());
+        if (dto.getType() != null) medicine.setType(Enum.valueOf(Type.class, dto.getType()));
     }
 }

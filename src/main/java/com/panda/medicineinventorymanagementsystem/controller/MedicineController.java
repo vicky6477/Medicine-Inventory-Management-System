@@ -1,16 +1,13 @@
 package com.panda.medicineinventorymanagementsystem.controller;
 
-import com.panda.medicineinventorymanagementsystem.entity.InboundTransaction;
-import com.panda.medicineinventorymanagementsystem.entity.Medicine;
-import com.panda.medicineinventorymanagementsystem.entity.OutboundTransaction;
-import com.panda.medicineinventorymanagementsystem.entity.Type;
+import com.panda.medicineinventorymanagementsystem.dto.MedicineDTO;
 import com.panda.medicineinventorymanagementsystem.services.MedicineService;
-import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Pageable;
+import jakarta.validation.Valid;
 import java.util.Optional;
 
 @RestController
@@ -22,17 +19,10 @@ public class MedicineController {
         this.medicineService = medicineService;
     }
 
-//    @PostMapping
-//    public ResponseEntity<Medicine> createMedicine(@RequestParam(required = false) String searchParam, @RequestBody Medicine medicine) {
-//        Medicine createdMedicine = medicineService.createOrFetchMedicine(searchParam, medicine);
-//        return ResponseEntity.ok(createdMedicine);
-//    }
-
     @PostMapping
-    public ResponseEntity<?> createMedicine(@RequestBody Medicine medicine) {
+    public ResponseEntity<?> createMedicine(@Valid @RequestBody MedicineDTO medicineDTO) {
         try {
-            medicine.setQuantity(0);
-            Medicine createdMedicine = medicineService.createOrFetchMedicine(medicine.getName(), medicine);
+            MedicineDTO createdMedicine = medicineService.createOrFetchMedicine(medicineDTO.getName(), medicineDTO);
             return ResponseEntity.ok(createdMedicine);
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
@@ -43,15 +33,9 @@ public class MedicineController {
         }
     }
 
-
-
-    //    @GetMapping("/{id}")
-//    public ResponseEntity<Medicine> getMedicineById(@PathVariable Integer id){
-//        return ResponseEntity.ok(medicineService.getMedicineById(id));
-//    }
     @GetMapping("/{id}")
     public ResponseEntity<?> getMedicineById(@PathVariable Integer id) {
-        Optional<Medicine> medicineOptional = medicineService.getMedicineById(id);
+        Optional<MedicineDTO> medicineOptional = medicineService.getMedicineById(id);
         if (medicineOptional.isPresent()) {
             return ResponseEntity.ok(medicineOptional.get());
         } else {
@@ -60,26 +44,19 @@ public class MedicineController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<Medicine>> getAllMedicines(Pageable pageable) {
+    public ResponseEntity<Page<MedicineDTO>> getAllMedicines(Pageable pageable) {
         return ResponseEntity.ok(medicineService.findAllMedicines(pageable));
     }
 
-//    @PutMapping("/{id}")
-//    public ResponseEntity<Medicine> updateMedicineById(@PathVariable Integer id, @RequestBody Medicine medicine) {
-//        Medicine updatedMedicine = medicineService.updateMedicineById(id, medicine);
-//        return ResponseEntity.ok(updatedMedicine);
-//    }
-
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateMedicineById(@PathVariable Integer id, @RequestBody Medicine medicine) {
-        Optional<Medicine> updatedMedicine = medicineService.updateMedicineById(id, medicine);
+    public ResponseEntity<?> updateMedicineById(@PathVariable Integer id, @Valid @RequestBody MedicineDTO medicineDTO) {
+        Optional<MedicineDTO> updatedMedicine = medicineService.updateMedicineById(id, medicineDTO);
         if (updatedMedicine.isPresent()) {
             return ResponseEntity.ok(updatedMedicine.get());
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Medicine id not found: " + id);
         }
     }
-
 
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteMedicine(@PathVariable Integer id) {
