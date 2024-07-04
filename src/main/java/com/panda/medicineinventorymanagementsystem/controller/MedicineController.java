@@ -3,6 +3,7 @@ package com.panda.medicineinventorymanagementsystem.controller;
 import com.panda.medicineinventorymanagementsystem.entity.InboundTransaction;
 import com.panda.medicineinventorymanagementsystem.entity.Medicine;
 import com.panda.medicineinventorymanagementsystem.entity.OutboundTransaction;
+import com.panda.medicineinventorymanagementsystem.entity.Type;
 import com.panda.medicineinventorymanagementsystem.services.MedicineService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
@@ -10,8 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Pageable;
-
-import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/medicines")
@@ -29,13 +29,20 @@ public class MedicineController {
 //    }
 
     @PostMapping
-    public ResponseEntity<Medicine> createMedicine(@RequestParam String name) {
-        Medicine newMedicine = new Medicine();
-        newMedicine.setName(name);
-        newMedicine.setQuantity(0);
-        Medicine createdMedicine = medicineService.createOrFetchMedicine(name, newMedicine);
-        return ResponseEntity.ok(createdMedicine);
+    public ResponseEntity<?> createMedicine(@RequestBody Medicine medicine) {
+        try {
+            medicine.setQuantity(0);
+            Medicine createdMedicine = medicineService.createOrFetchMedicine(medicine.getName(), medicine);
+            return ResponseEntity.ok(createdMedicine);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid type provided.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred while creating the medicine.");
+        }
     }
+
 
 
     //    @GetMapping("/{id}")
@@ -43,25 +50,34 @@ public class MedicineController {
 //        return ResponseEntity.ok(medicineService.getMedicineById(id));
 //    }
     @GetMapping("/{id}")
-    public ResponseEntity<Medicine> getMedicineById(@PathVariable Integer id) {
-        try {
-            Medicine medicine = medicineService.getMedicineById(id);
-            return ResponseEntity.ok(medicine);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null); // 更明确的错误处理
+    public ResponseEntity<?> getMedicineById(@PathVariable Integer id) {
+        Optional<Medicine> medicineOptional = medicineService.getMedicineById(id);
+        if (medicineOptional.isPresent()) {
+            return ResponseEntity.ok(medicineOptional.get());
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Medicine not found with ID: " + id);
         }
     }
-
 
     @GetMapping
     public ResponseEntity<Page<Medicine>> getAllMedicines(Pageable pageable) {
         return ResponseEntity.ok(medicineService.findAllMedicines(pageable));
     }
 
+//    @PutMapping("/{id}")
+//    public ResponseEntity<Medicine> updateMedicineById(@PathVariable Integer id, @RequestBody Medicine medicine) {
+//        Medicine updatedMedicine = medicineService.updateMedicineById(id, medicine);
+//        return ResponseEntity.ok(updatedMedicine);
+//    }
+
     @PutMapping("/{id}")
-    public ResponseEntity<Medicine> updateMedicine(@PathVariable Integer id, @RequestBody Medicine medicine) {
-        Medicine updatedMedicine = medicineService.updateMedicine(id, medicine);
-        return ResponseEntity.ok(updatedMedicine);
+    public ResponseEntity<?> updateMedicineById(@PathVariable Integer id, @RequestBody Medicine medicine) {
+        Optional<Medicine> updatedMedicine = medicineService.updateMedicineById(id, medicine);
+        if (updatedMedicine.isPresent()) {
+            return ResponseEntity.ok(updatedMedicine.get());
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Medicine id not found: " + id);
+        }
     }
 
 
