@@ -68,8 +68,8 @@ public class OpenFDAApiService {
                     .filter(s -> s != null && !s.isEmpty())
                     .collect(Collectors.joining(" "));
 
-            if (finalDescription.length() > 1000) {
-                finalDescription = finalDescription.substring(0, 1000);
+            if (finalDescription.length() > 255) {
+                finalDescription = finalDescription.substring(0, 255);
             }
 
             medicineDTO.setDescription(finalDescription.isEmpty() ? "Default description" : finalDescription);
