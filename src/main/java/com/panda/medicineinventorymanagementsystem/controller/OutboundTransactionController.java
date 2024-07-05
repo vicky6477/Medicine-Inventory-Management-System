@@ -2,6 +2,7 @@ package com.panda.medicineinventorymanagementsystem.controller;
 
 import com.panda.medicineinventorymanagementsystem.dto.OutboundTransactionDTO;
 import com.panda.medicineinventorymanagementsystem.services.OutboundTransactionService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,7 +26,7 @@ public class OutboundTransactionController {
 
 
     @PostMapping
-    public ResponseEntity<?> createOutboundTransactions(@RequestBody List<OutboundTransactionDTO> transactionsDTO,BindingResult bindingResult) {
+    public ResponseEntity<?> createOutboundTransactions(@Valid @RequestBody List<OutboundTransactionDTO> transactionsDTO, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ResponseEntity.badRequest().body(bindingResult.getAllErrors());
         }
