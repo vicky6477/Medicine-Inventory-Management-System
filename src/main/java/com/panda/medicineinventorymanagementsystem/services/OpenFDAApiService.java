@@ -58,6 +58,8 @@ public class OpenFDAApiService {
         return Optional.empty();
     }
 
+
+    //parse description
     private MedicineDTO parseMedicine(JSONObject details, MedicineDTO medicineDTO) {
         try {
             String description = findBestMatch(details, "description");
@@ -80,6 +82,8 @@ public class OpenFDAApiService {
         return medicineDTO;
     }
 
+
+    //find useful in openfda
     private String findBestMatch(JSONObject details, String key) {
         try {
             if (!details.has(key) || details.get(key) == JSONObject.NULL) return "";

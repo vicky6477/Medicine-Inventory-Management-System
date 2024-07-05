@@ -68,54 +68,6 @@ public class OutboundTransactionService {
         return outboundTransactionRepository.saveAll(transactions);
     }
 
-    /*@Transactional
-    public List<OutboundTransaction> addOutboundTransactions(List<OutboundTransaction> transactions) {
-        // Collect all medicine IDs from the transactions
-        Set<Integer> medicineIds = transactions.stream()
-                .map(transaction -> transaction.getMedicine().getId())
-                .collect(Collectors.toSet());
-
-        // Fetch all medicines once and store them in a map for quick lookup
-        Map<Integer, Medicine> medicines = medicineRepository.findAllById(medicineIds)
-                .stream()
-                .collect(Collectors.toMap(Medicine::getId, Function.identity()));
-
-        List<Medicine> batchMedicines = new ArrayList<>();
-
-        // Update the quantities and set the original Medicine object into each transaction
-        for (int i = 0; i < transactions.size(); i++) {
-            OutboundTransaction transaction = transactions.get(i);
-            Medicine originalMedicine = medicines.get(transaction.getMedicine().getId());
-            if (originalMedicine == null) {
-                throw new IllegalStateException("Medicine with ID " + transaction.getMedicine().getId() + " not found");
-            }
-            int newQuantity = originalMedicine.getQuantity() - transaction.getQuantity();
-            if (newQuantity < 0) {
-                throw new IllegalStateException("Insufficient stock for medicine ID " + originalMedicine.getId());
-            }
-
-            // Set the original quantity for the transaction before modifying the medicine's quantity
-            transaction.setOriginalMedicineQuantity(originalMedicine.getQuantity());
-            originalMedicine.setQuantity(newQuantity);
-
-            // Update the medicine in the transaction after modifying its quantity
-            transaction.setMedicine(originalMedicine);
-            transaction.setUpdateTransactionQuantity(newQuantity);
-
-            batchMedicines.add(originalMedicine);
-
-            if ((i + 1) % 100 == 0 || i == transactions.size() - 1) {
-                medicineRepository.saveAll(batchMedicines);
-                entityManager.flush();
-                batchMedicines.clear();
-            }
-        }
-
-        // Ensure all transactions have their required fields set before saving
-        return outboundTransactionRepository.saveAll(transactions);
-    }
-*/
-
 
     //Retrieve all outbound transactions
     public Page<OutboundTransaction> getAllOutboundTransactions(Pageable pageable) {

@@ -63,55 +63,6 @@ public class InboundTransactionService {
         return inboundTransactionRepository.saveAll(transactions);
     }
 
-   /* @Transactional
-    public List<InboundTransaction> addInboundTransactions(List<InboundTransaction> transactions) {
-        if (transactions.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        // Collect all medicine IDs from the transactions
-        Set<Integer> medicineIds = transactions.stream()
-                .map(transaction -> transaction.getMedicine().getId())
-                .collect(Collectors.toSet());
-
-        // Fetch all medicines once and store them in a map for quick lookup
-        Map<Integer, Medicine> medicines = medicineRepository.findAllById(medicineIds)
-                .stream()
-                .collect(Collectors.toMap(Medicine::getId, Function.identity()));
-
-        List<Medicine> batchMedicines = new ArrayList<>();
-        int batchSize = 100;  // Define the batch size
-
-        for (int i = 0; i < transactions.size(); i++) {
-            InboundTransaction transaction = transactions.get(i);
-            Medicine originalMedicine = medicines.get(transaction.getMedicine().getId());
-
-            if (originalMedicine == null) {
-                throw new IllegalStateException("Medicine with ID " + transaction.getMedicine().getId() + " not found");
-            }
-
-            transaction.setOriginalMedicineQuantity(originalMedicine.getQuantity());
-            int newQuantity = originalMedicine.getQuantity() + transaction.getQuantity();
-            originalMedicine.setQuantity(newQuantity); // Update the quantity
-
-            // Important: set the original medicine object
-            transaction.setMedicine(originalMedicine);
-            transaction.setUpdateTransactionQuantity(newQuantity);
-
-            batchMedicines.add(originalMedicine);
-
-            // Check if it's time to save the batch
-            if ((i + 1) % batchSize == 0 || i == transactions.size() - 1) {
-                medicineRepository.saveAll(batchMedicines);
-                entityManager.flush();
-                batchMedicines.clear();
-            }
-        }
-
-        // Save and return all transactions
-        return inboundTransactionRepository.saveAll(transactions);
-    }*/
-
 
     //Retrieve all transactions
     public Page<InboundTransaction> getAllInboundTransactions(Pageable pageable) {
