@@ -1,16 +1,16 @@
 package com.panda.medicineinventorymanagementsystem.controller;
 
-import com.panda.medicineinventorymanagementsystem.entity.Medicine;
-import com.panda.medicineinventorymanagementsystem.entity.OutboundTransaction;
+import com.panda.medicineinventorymanagementsystem.dto.OutboundTransactionDTO;
 import com.panda.medicineinventorymanagementsystem.services.OutboundTransactionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collections;
+
 import java.util.List;
 
 @RestController
@@ -23,51 +23,46 @@ public class OutboundTransactionController {
         this.outboundTransactionService = outboundTransactionService;
     }
 
-   /* @PostMapping
-    public ResponseEntity<List<Medicine>> addOutboundTransactions(@RequestBody List<OutboundTransaction> transactions) {
-        return ResponseEntity.ok(outboundTransactionService.addOutboundTransactions(transactions));
-    }*/
-
-   /* @PostMapping
-    public ResponseEntity<List<OutboundTransaction>> createOutboundTransactions(@RequestBody List<OutboundTransaction> transactions) {
-        try {
-            List<OutboundTransaction> savedTransactions = outboundTransactionService.addOutboundTransactions(transactions);
-            return ResponseEntity.ok(savedTransactions);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }*/
 
     @PostMapping
-    public ResponseEntity<?> createOutboundTransactions(@RequestBody List<OutboundTransaction> transactions) {
+    public ResponseEntity<?> createOutboundTransactions(@RequestBody List<OutboundTransactionDTO> transactionsDTO,BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return ResponseEntity.badRequest().body(bindingResult.getAllErrors());
+        }
         try {
-            List<OutboundTransaction> savedTransactions = outboundTransactionService.addOutboundTransactions(transactions);
+            List<OutboundTransactionDTO> savedTransactions = outboundTransactionService.addOutboundTransactions(transactionsDTO);
             return ResponseEntity.ok(savedTransactions);
-        } catch (IllegalStateException e) {
-            // 返回具体的业务规则违反错误信息
-            return ResponseEntity.badRequest().body("Business rule violation: " + e.getMessage());
-        } catch (Exception e) {
-            // 提供更多的错误信息方便调试
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal Server Error: " + e.getMessage());
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
 
     @GetMapping
-    public ResponseEntity<Page<OutboundTransaction>> getAllOutboundTransactions(Pageable pageable) {
+    public ResponseEntity<Page<OutboundTransactionDTO>> getAllOutboundTransactions(Pageable pageable) {
         return ResponseEntity.ok(outboundTransactionService.getAllOutboundTransactions(pageable));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<OutboundTransaction> getOutboundTransactionById(@PathVariable Integer id) {
+    public ResponseEntity<?> getOutboundTransactionById(@PathVariable Integer id) {
         try {
-            OutboundTransaction transaction = outboundTransactionService.getOutboundTransactionById(id);
-            return ResponseEntity.ok(transaction);
+            OutboundTransactionDTO transactionDTO = outboundTransactionService.getOutboundTransactionById(id);
+            return ResponseEntity.ok(transactionDTO);
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
 
-    @PutMapping("/{id}")
+    @GetMapping("/by-medicine/{medicineId}")
+    public ResponseEntity<?> getTransactionsByMedicineId(@PathVariable Integer medicineId) {
+        try {
+            List<OutboundTransactionDTO> transactions = outboundTransactionService.getTransactionsByMedicineId(medicineId);
+            return ResponseEntity.ok(transactions);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
+
+ /*   @PutMapping("/{id}")
     public ResponseEntity<OutboundTransaction> updateOutboundTransaction(@PathVariable Integer id, @RequestBody OutboundTransaction transaction) {
         try {
             OutboundTransaction updatedTransaction = outboundTransactionService.updateOutboundTransaction(id, transaction);
@@ -85,5 +80,5 @@ public class OutboundTransactionController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Transaction not found with ID: " + id);
         }
-    }
+    }*/
 }

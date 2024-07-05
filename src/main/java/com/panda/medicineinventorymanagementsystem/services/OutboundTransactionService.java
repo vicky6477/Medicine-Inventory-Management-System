@@ -1,5 +1,6 @@
 package com.panda.medicineinventorymanagementsystem.services;
 
+import com.panda.medicineinventorymanagementsystem.dto.OutboundTransactionDTO;
 import com.panda.medicineinventorymanagementsystem.entity.Medicine;
 import com.panda.medicineinventorymanagementsystem.entity.OutboundTransaction;
 import com.panda.medicineinventorymanagementsystem.repository.MedicineRepository;
@@ -11,7 +12,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,7 +34,11 @@ public class OutboundTransactionService {
 
     //Create medicines outbound transactions
     @Transactional
-    public List<OutboundTransaction> addOutboundTransactions(List<OutboundTransaction> transactions) {
+    public List<OutboundTransactionDTO> addOutboundTransactions(List<OutboundTransactionDTO> transactionsDTO) {
+        List<OutboundTransaction> transactions = transactionsDTO.stream()
+                .map(this::convertToEntity)
+                .collect(Collectors.toList());
+
         // Collect all medicine IDs from the transactions for batch fetching
         Set<Integer> medicineIds = transactions.stream()
                 .map(tx -> tx.getMedicine().getId())
@@ -65,22 +69,38 @@ public class OutboundTransactionService {
         medicineRepository.saveAll(medicines.values());
 
         // Save all transactions to the database in a batch operation and return them
-        return outboundTransactionRepository.saveAll(transactions);
+        List<OutboundTransaction> savedTransactions = outboundTransactionRepository.saveAll(transactions);
+        return savedTransactions.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
 
 
     //Retrieve all outbound transactions
-    public Page<OutboundTransaction> getAllOutboundTransactions(Pageable pageable) {
-        return outboundTransactionRepository.findAll(pageable);
+    public Page<OutboundTransactionDTO> getAllOutboundTransactions(Pageable pageable) {
+        return outboundTransactionRepository.findAll(pageable)
+                .map(this::convertToDTO);
     }
 
-    //in real world situation, we'll have order number, so we could use it to modify the transaction(using id here for now)
-    public OutboundTransaction getOutboundTransactionById(Integer id) {
-        return outboundTransactionRepository.findById(id)
+    //Retrieve a single transaction by id
+    public OutboundTransactionDTO getOutboundTransactionById(Integer id) {
+        OutboundTransaction transaction = outboundTransactionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Outbound transaction not found with ID: " + id));
+        return convertToDTO(transaction);
     }
 
-    @Transactional
+    // Retrieve transactions by medicineId
+    public List<OutboundTransactionDTO> getTransactionsByMedicineId(Integer medicineId) {
+        List<OutboundTransaction> transactions = outboundTransactionRepository.findByMedicineId(medicineId);
+        if (transactions.isEmpty()) {
+            throw new RuntimeException("Outbound transactions not found for medicine ID: " + medicineId);
+        }
+        return transactions.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+/*    @Transactional
     public OutboundTransaction updateOutboundTransaction(Integer id, OutboundTransaction updatedTransaction) {
         OutboundTransaction transaction = getOutboundTransactionById(id);
         transaction.setQuantity(updatedTransaction.getQuantity());
@@ -92,5 +112,26 @@ public class OutboundTransactionService {
     public void deleteOutboundTransaction(Integer id) {
         OutboundTransaction transaction = getOutboundTransactionById(id);
         outboundTransactionRepository.delete(transaction);
+    }*/
+
+    private OutboundTransactionDTO convertToDTO(OutboundTransaction transaction) {
+        OutboundTransactionDTO dto = new OutboundTransactionDTO();
+        dto.setId(transaction.getId());
+        dto.setMedicineId(transaction.getMedicine().getId());
+        dto.setQuantity(transaction.getQuantity());
+        dto.setOriginalMedicineQuantity(transaction.getOriginalMedicineQuantity());
+        dto.setUpdateTransactionQuantity(transaction.getUpdateTransactionQuantity());
+        dto.setDispatcheddDate(transaction.getDispatcheddDate());
+        dto.setSupplier(transaction.getSupplier());
+        return dto;
+    }
+
+    private OutboundTransaction convertToEntity(OutboundTransactionDTO dto) {
+        OutboundTransaction transaction = new OutboundTransaction();
+        Medicine medicine = medicineRepository.findById(dto.getMedicineId()).orElseThrow(() -> new RuntimeException("Medicine not found with ID: " + dto.getMedicineId()));
+        transaction.setMedicine(medicine);
+        transaction.setQuantity(dto.getQuantity());
+        transaction.setSupplier(dto.getSupplier());
+        return transaction;
     }
 }
