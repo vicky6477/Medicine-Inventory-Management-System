@@ -1,5 +1,6 @@
 package com.panda.medicineinventorymanagementsystem.services;
 
+import com.panda.medicineinventorymanagementsystem.dto.OutboundTransactionDTO;
 import com.panda.medicineinventorymanagementsystem.entity.Medicine;
 import com.panda.medicineinventorymanagementsystem.entity.OutboundTransaction;
 import com.panda.medicineinventorymanagementsystem.repository.MedicineRepository;
@@ -11,7 +12,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,7 +34,11 @@ public class OutboundTransactionService {
 
     //Create medicines outbound transactions
     @Transactional
-    public List<OutboundTransaction> addOutboundTransactions(List<OutboundTransaction> transactions) {
+    public List<OutboundTransactionDTO> addOutboundTransactions(List<OutboundTransactionDTO> transactionsDTO) {
+        List<OutboundTransaction> transactions = transactionsDTO.stream()
+                .map(this::convertToEntity)
+                .collect(Collectors.toList());
+
         // Collect all medicine IDs from the transactions for batch fetching
         Set<Integer> medicineIds = transactions.stream()
                 .map(tx -> tx.getMedicine().getId())
@@ -65,70 +69,38 @@ public class OutboundTransactionService {
         medicineRepository.saveAll(medicines.values());
 
         // Save all transactions to the database in a batch operation and return them
-        return outboundTransactionRepository.saveAll(transactions);
+        List<OutboundTransaction> savedTransactions = outboundTransactionRepository.saveAll(transactions);
+        return savedTransactions.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
-
-    /*@Transactional
-    public List<OutboundTransaction> addOutboundTransactions(List<OutboundTransaction> transactions) {
-        // Collect all medicine IDs from the transactions
-        Set<Integer> medicineIds = transactions.stream()
-                .map(transaction -> transaction.getMedicine().getId())
-                .collect(Collectors.toSet());
-
-        // Fetch all medicines once and store them in a map for quick lookup
-        Map<Integer, Medicine> medicines = medicineRepository.findAllById(medicineIds)
-                .stream()
-                .collect(Collectors.toMap(Medicine::getId, Function.identity()));
-
-        List<Medicine> batchMedicines = new ArrayList<>();
-
-        // Update the quantities and set the original Medicine object into each transaction
-        for (int i = 0; i < transactions.size(); i++) {
-            OutboundTransaction transaction = transactions.get(i);
-            Medicine originalMedicine = medicines.get(transaction.getMedicine().getId());
-            if (originalMedicine == null) {
-                throw new IllegalStateException("Medicine with ID " + transaction.getMedicine().getId() + " not found");
-            }
-            int newQuantity = originalMedicine.getQuantity() - transaction.getQuantity();
-            if (newQuantity < 0) {
-                throw new IllegalStateException("Insufficient stock for medicine ID " + originalMedicine.getId());
-            }
-
-            // Set the original quantity for the transaction before modifying the medicine's quantity
-            transaction.setOriginalMedicineQuantity(originalMedicine.getQuantity());
-            originalMedicine.setQuantity(newQuantity);
-
-            // Update the medicine in the transaction after modifying its quantity
-            transaction.setMedicine(originalMedicine);
-            transaction.setUpdateTransactionQuantity(newQuantity);
-
-            batchMedicines.add(originalMedicine);
-
-            if ((i + 1) % 100 == 0 || i == transactions.size() - 1) {
-                medicineRepository.saveAll(batchMedicines);
-                entityManager.flush();
-                batchMedicines.clear();
-            }
-        }
-
-        // Ensure all transactions have their required fields set before saving
-        return outboundTransactionRepository.saveAll(transactions);
-    }
-*/
 
 
     //Retrieve all outbound transactions
-    public Page<OutboundTransaction> getAllOutboundTransactions(Pageable pageable) {
-        return outboundTransactionRepository.findAll(pageable);
+    public Page<OutboundTransactionDTO> getAllOutboundTransactions(Pageable pageable) {
+        return outboundTransactionRepository.findAll(pageable)
+                .map(this::convertToDTO);
     }
 
-    //in real world situation, we'll have order number, so we could use it to modify the transaction(using id here for now)
-    public OutboundTransaction getOutboundTransactionById(Integer id) {
-        return outboundTransactionRepository.findById(id)
+    //Retrieve a single transaction by id
+    public OutboundTransactionDTO getOutboundTransactionById(Integer id) {
+        OutboundTransaction transaction = outboundTransactionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Outbound transaction not found with ID: " + id));
+        return convertToDTO(transaction);
     }
 
-    @Transactional
+    // Retrieve transactions by medicineId
+    public List<OutboundTransactionDTO> getTransactionsByMedicineId(Integer medicineId) {
+        List<OutboundTransaction> transactions = outboundTransactionRepository.findByMedicineId(medicineId);
+        if (transactions.isEmpty()) {
+            throw new RuntimeException("Outbound transactions not found for medicine ID: " + medicineId);
+        }
+        return transactions.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+/*    @Transactional
     public OutboundTransaction updateOutboundTransaction(Integer id, OutboundTransaction updatedTransaction) {
         OutboundTransaction transaction = getOutboundTransactionById(id);
         transaction.setQuantity(updatedTransaction.getQuantity());
@@ -140,5 +112,26 @@ public class OutboundTransactionService {
     public void deleteOutboundTransaction(Integer id) {
         OutboundTransaction transaction = getOutboundTransactionById(id);
         outboundTransactionRepository.delete(transaction);
+    }*/
+
+    private OutboundTransactionDTO convertToDTO(OutboundTransaction transaction) {
+        OutboundTransactionDTO dto = new OutboundTransactionDTO();
+        dto.setId(transaction.getId());
+        dto.setMedicineId(transaction.getMedicine().getId());
+        dto.setQuantity(transaction.getQuantity());
+        dto.setOriginalMedicineQuantity(transaction.getOriginalMedicineQuantity());
+        dto.setUpdateTransactionQuantity(transaction.getUpdateTransactionQuantity());
+        dto.setDispatcheddDate(transaction.getDispatcheddDate());
+        dto.setSupplier(transaction.getSupplier());
+        return dto;
+    }
+
+    private OutboundTransaction convertToEntity(OutboundTransactionDTO dto) {
+        OutboundTransaction transaction = new OutboundTransaction();
+        Medicine medicine = medicineRepository.findById(dto.getMedicineId()).orElseThrow(() -> new RuntimeException("Medicine not found with ID: " + dto.getMedicineId()));
+        transaction.setMedicine(medicine);
+        transaction.setQuantity(dto.getQuantity());
+        transaction.setSupplier(dto.getSupplier());
+        return transaction;
     }
 }

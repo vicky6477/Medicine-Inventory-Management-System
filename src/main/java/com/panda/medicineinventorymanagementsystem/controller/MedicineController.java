@@ -5,10 +5,11 @@ import com.panda.medicineinventorymanagementsystem.services.MedicineService;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Pageable;
 import jakarta.validation.Valid;
-import java.util.Optional;
+
 
 @RestController
 @RequestMapping("/medicines")
@@ -20,7 +21,10 @@ public class MedicineController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createMedicine(@Valid @RequestBody MedicineDTO medicineDTO) {
+    public ResponseEntity<?> createMedicine(@Valid @RequestBody MedicineDTO medicineDTO, BindingResult result) {
+        if (result.hasErrors()) {
+            return ResponseEntity.badRequest().body(result.getAllErrors());
+        }
         try {
             MedicineDTO createdMedicine = medicineService.createOrFetchMedicine(medicineDTO.getName(), medicineDTO);
             return ResponseEntity.ok(createdMedicine);
@@ -35,11 +39,11 @@ public class MedicineController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getMedicineById(@PathVariable Integer id) {
-        Optional<MedicineDTO> medicineOptional = medicineService.getMedicineById(id);
-        if (medicineOptional.isPresent()) {
-            return ResponseEntity.ok(medicineOptional.get());
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Medicine not found with ID: " + id);
+        try {
+            MedicineDTO medicineDTO = medicineService.getMedicineById(id);
+            return ResponseEntity.ok(medicineDTO);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
 
@@ -49,14 +53,21 @@ public class MedicineController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateMedicineById(@PathVariable Integer id, @Valid @RequestBody MedicineDTO medicineDTO) {
-        Optional<MedicineDTO> updatedMedicine = medicineService.updateMedicineById(id, medicineDTO);
-        if (updatedMedicine.isPresent()) {
-            return ResponseEntity.ok(updatedMedicine.get());
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Medicine id not found: " + id);
+    public ResponseEntity<?> updateMedicineById(@PathVariable Integer id, @Valid @RequestBody MedicineDTO medicineDTO, BindingResult result) {
+        if (result.hasErrors()) {
+            return ResponseEntity.badRequest().body(result.getAllErrors());
+        }
+        try {
+            MedicineDTO updatedMedicine = medicineService.updateMedicineById(id, medicineDTO)
+                    .orElseThrow(() -> new RuntimeException("Unexpected error occurred while updating the medicine."));
+            return ResponseEntity.ok(updatedMedicine);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred while updating the medicine.");
         }
     }
+
 
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteMedicine(@PathVariable Integer id) {
