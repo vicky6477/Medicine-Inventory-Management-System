@@ -40,6 +40,7 @@ public class InboundTransactionService {
      */
     @Transactional
     public List<InboundTransactionDTO> addInboundTransactions(List<InboundTransactionDTO> transactionsDTO) {
+        // Convert the list of InboundTransactionDTOs to InboundTransaction entities using the convertToEntity method
         List<InboundTransaction> transactions = transactionsDTO.stream()
                 .map(this::convertToEntity)
                 .collect(Collectors.toList());

@@ -41,6 +41,7 @@ public class OutboundTransactionService {
      */
     @Transactional
     public List<OutboundTransactionDTO> addOutboundTransactions(List<OutboundTransactionDTO> transactionsDTO) {
+        // Convert the list of OutboundTransactionDTOs to OutboundTransaction entities using the convertToEntity method
         List<OutboundTransaction> transactions = transactionsDTO.stream()
                 .map(this::convertToEntity)
                 .collect(Collectors.toList());
