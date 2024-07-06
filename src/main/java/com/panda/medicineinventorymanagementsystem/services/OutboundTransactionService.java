@@ -41,36 +41,46 @@ public class OutboundTransactionService {
      */
     @Transactional
     public List<OutboundTransactionDTO> addOutboundTransactions(List<OutboundTransactionDTO> transactionsDTO) {
-        // Convert the list of OutboundTransactionDTOs to OutboundTransaction entities using the convertToEntity method
-        List<OutboundTransaction> transactions = transactionsDTO.stream()
-                .map(this::convertToEntity)
-                .collect(Collectors.toList());
-
-        // Collect all medicine IDs from the transactions for batch fetching
-        Set<Integer> medicineIds = transactions.stream()
-                .map(tx -> tx.getMedicine().getId())
+        // Extract medicine IDs from DTOs
+        Set<Integer> medicineIds = transactionsDTO.stream()
+                .map(OutboundTransactionDTO::getMedicineId)
                 .collect(Collectors.toSet());
 
-        // Fetch all corresponding medicines once and store them in a map for quick access
+        // Fetch corresponding medicines from the database and store them in a map for quick access
         Map<Integer, Medicine> medicines = medicineRepository.findAllById(medicineIds)
                 .stream()
                 .collect(Collectors.toMap(Medicine::getId, Function.identity()));
 
+        // Check if all medicines are found, and find the missing id
+        Set<Integer> missingMedicines = medicineIds.stream()
+                .filter(id -> !medicines.containsKey(id))
+                .collect(Collectors.toSet());
+        if (!missingMedicines.isEmpty()) {
+            throw new IllegalStateException("Medicines not found for IDs: " + missingMedicines);
+        }
+
+        // All medicines exist, convert DTOs to entities
+        List<OutboundTransaction> transactions = transactionsDTO.stream()
+                .map(dto -> convertToEntity(dto, medicines))
+                .collect(Collectors.toList());
+
         // Process each transaction to update the medicine quantity and validate the transaction
         transactions.forEach(transaction -> {
-            Medicine originalMedicine = medicines.get(transaction.getMedicine().getId());
-            if (originalMedicine == null) {
-                throw new IllegalStateException("Medicine with ID " + transaction.getMedicine().getId() + " not found");
-            }
-            transaction.setOriginalMedicineQuantity(originalMedicine.getQuantity());
-            int newQuantity = originalMedicine.getQuantity() - transaction.getQuantity();
+            Medicine originalMedicine = transaction.getMedicine();
+            int originalQuantity = originalMedicine.getQuantity();
+            int subtractedQuantity = transaction.getQuantity();
+            int newQuantity = originalQuantity - subtractedQuantity;
+
             if (newQuantity < 0) {
-                throw new IllegalStateException("Insufficient stock for medicine ID " + originalMedicine.getId());
+                throw new IllegalStateException("Insufficient stock for medicine ID: " + originalMedicine.getId());
             }
-            originalMedicine.setQuantity(newQuantity); // Update the medicine's quantity
-            transaction.setMedicine(originalMedicine); // Set the updated originalMedicine object in the transaction
+
+            // Update medicine quantity
+            originalMedicine.setQuantity(newQuantity);
+            transaction.setOriginalMedicineQuantity(originalQuantity);
             transaction.setUpdateTransactionQuantity(newQuantity);
         });
+
 
         // Save all modified medicines to the database in a batch operation
         medicineRepository.saveAll(medicines.values());
@@ -138,13 +148,20 @@ public class OutboundTransactionService {
     }
 
     /**
-     * Converts an OutboundTransactionDTO to an entity format.
-     * @param dto The OutboundTransactionDTO.
-     * @return OutboundTransaction.
+     * Converts an OutboundTransactionDTO to an OutboundTransaction entity.
+     * @param dto The OutboundTransactionDTO to convert.
+     * @param medicineMap A map of Medicine entities indexed by their IDs, used to fetch the Medicine
+     *                    associated with the DTO.
+     * @return OutboundTransaction The fully constructed OutboundTransaction entity, ready for persistence.
+     * @throws IllegalStateException If the medicine associated with the DTO's medicineId does not exist
+     *                               in the provided medicine map.
      */
-    private OutboundTransaction convertToEntity(OutboundTransactionDTO dto) {
+    private OutboundTransaction convertToEntity(OutboundTransactionDTO dto, Map<Integer, Medicine> medicineMap) {
         OutboundTransaction transaction = new OutboundTransaction();
-        Medicine medicine = medicineRepository.findById(dto.getMedicineId()).orElseThrow(() -> new RuntimeException("Medicine not found with ID: " + dto.getMedicineId()));
+        Medicine medicine = medicineMap.get(dto.getMedicineId());
+        if (medicine == null) {
+            throw new IllegalStateException("Medicine not found for ID: " + dto.getMedicineId());
+        }
         transaction.setMedicine(medicine);
         transaction.setQuantity(dto.getQuantity());
         transaction.setSupplier(dto.getSupplier());
