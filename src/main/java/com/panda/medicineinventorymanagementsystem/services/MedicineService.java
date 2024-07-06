@@ -125,6 +125,7 @@ public class MedicineService {
      */
     @Transactional
     public void deleteMedicine(Integer id) {
+        //check if there are existing related transactions
         boolean existsInbound = inboundTransactionRepository.existsByMedicineId(id);
         boolean existsOutbound = outboundTransactionRepository.existsByMedicineId(id);
         if (existsInbound || existsOutbound) {
