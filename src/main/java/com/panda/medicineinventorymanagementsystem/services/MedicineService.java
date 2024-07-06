@@ -166,7 +166,6 @@ public class MedicineService {
 
     /**
      * Updates an existing Medicine entity with data from a MedicineDTO.
-     *
      * @param medicine the existing Medicine entity to update.
      * @param dto the MedicineDTO containing updated data.
      */
