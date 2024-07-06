@@ -2,8 +2,10 @@ package com.panda.medicineinventorymanagementsystem.dto;
 
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+
 
 @Data
 public class MedicineDTO {
@@ -15,6 +17,7 @@ public class MedicineDTO {
     private String description;
     private Integer quantity;
     @NotBlank(message = "Type must not be blank")
+    @Pattern(regexp = "PRES|OTC|OTHER", message = "Type must be one of the predefined types: PRES, OTC, OTHER")
     private String type;
 
 }

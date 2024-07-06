@@ -6,6 +6,7 @@ import com.panda.medicineinventorymanagementsystem.entity.Type;
 import com.panda.medicineinventorymanagementsystem.repository.InboundTransactionRepository;
 import com.panda.medicineinventorymanagementsystem.repository.MedicineRepository;
 import com.panda.medicineinventorymanagementsystem.repository.OutboundTransactionRepository;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -21,6 +22,13 @@ public class MedicineService {
     private final InboundTransactionRepository inboundTransactionRepository;
     private final OutboundTransactionRepository outboundTransactionRepository;
 
+    /**
+     * Constructs a MedicineService with required repositories.
+     * @param medicineRepository the repository for medicine data access
+     * @param openFDAApiService the service for fetching medicine data from OpenFDA
+     * @param inboundTransactionRepository the repository for inbound transactions
+     * @param outboundTransactionRepository the repository for outbound transactions
+     */
     @Autowired
     public MedicineService(MedicineRepository medicineRepository,
                            OpenFDAApiService openFDAApiService,
@@ -32,11 +40,24 @@ public class MedicineService {
         this.outboundTransactionRepository = outboundTransactionRepository;
     }
 
-    //create a new medicine
+    /**
+     * Creates or fetches medicine from OpenFDA and saves it in the database.
+     * @param name the name of the medicine
+     * @param inputMedicineDTO the DTO containing medicine data
+     * @return the saved medicine DTO
+     * @throws IllegalStateException if the medicine name already exists
+     * @throws IllegalArgumentException if the provided type is invalid
+     */
     @Transactional
     public MedicineDTO createOrFetchMedicine(String name, MedicineDTO inputMedicineDTO) {
+        //check if the medicine already exits
         if (medicineRepository.findByName(name).isPresent()) {
             throw new IllegalStateException("Medicine with name '" + name + "' already exists");
+        }
+
+        //check if the input type correct
+        if (!Type.isValidType(inputMedicineDTO.getType())) {
+            throw new IllegalArgumentException("Invalid type provided: " + inputMedicineDTO.getType());
         }
 
         // Set default values for properties not set
@@ -54,47 +75,69 @@ public class MedicineService {
         return convertToDTO(medicine);
     }
 
-    //retrieve a medicine by id
+
+    /**
+     * Retrieves a medicine by its ID.
+     * @param id the ID of the medicine
+     * @return the medicine DTO
+     * @throws EntityNotFoundException if no medicine is found with the provided ID
+     */
     public MedicineDTO getMedicineById(Integer id) {
         return medicineRepository.findById(id)
                 .map(this::convertToDTO)
-                .orElseThrow(() -> new RuntimeException("Medicine not found with ID: " + id));
+                .orElseThrow(() -> new EntityNotFoundException("Medicine not found with ID: " + id));
     }
 
-    //retrieve all medicine
+    /**
+     * Retrieves all medicines in a paginated format.
+     * @param pageable the pagination information.
+     * @return a page of medicine DTOs.
+     */
     public Page<MedicineDTO> findAllMedicines(Pageable pageable) {
         return medicineRepository.findAll(pageable).map(this::convertToDTO);
     }
 
-    //update an existing medicine by id
-
+    /**
+     * Updates an existing medicine by its ID.
+     * @param id the ID of the medicine to update
+     * @param medicineDTO the DTO containing updated data
+     * @return the updated medicine DTO
+     * @throws EntityNotFoundException if no medicine is found with the provided ID
+     * @throws IllegalArgumentException if the provided type is invalid
+     */
     @Transactional
-    public Optional<MedicineDTO> updateMedicineById(Integer id, MedicineDTO medicineDetailsDTO) {
-        Optional<Medicine> foundMedicine = medicineRepository.findById(id);
-
-        if (!foundMedicine.isPresent()) {
-            throw new IllegalStateException("Medicine not found with ID: " + id);
+    public MedicineDTO updateMedicineById(Integer id, MedicineDTO medicineDTO) {
+        Medicine existingMedicine = medicineRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Medicine not found with ID: " + id));
+        if (!Type.isValidType(medicineDTO.getType())) {
+            throw new IllegalArgumentException("Invalid type provided: " + medicineDTO.getType());
         }
 
-        Medicine existingMedicine = foundMedicine.get();
-        updateEntity(existingMedicine, medicineDetailsDTO);
+        updateEntity(existingMedicine, medicineDTO);
         Medicine updatedMedicine = medicineRepository.save(existingMedicine);
-        return Optional.of(convertToDTO(updatedMedicine));
+        return convertToDTO(updatedMedicine);
     }
 
-
-    //delete an existing medicine by id
+    /**
+     * Deletes a medicine by its ID
+     * @param id the ID of the medicine to delete.
+     * @throws EntityNotFoundException if there are existing related transactions that prevent deletion.
+     */
     @Transactional
     public void deleteMedicine(Integer id) {
         boolean existsInbound = inboundTransactionRepository.existsByMedicineId(id);
         boolean existsOutbound = outboundTransactionRepository.existsByMedicineId(id);
         if (existsInbound || existsOutbound) {
-            throw new IllegalStateException("Cannot delete medicine with ID: " + id + " because there are existing related transactions.");
+            throw new EntityNotFoundException("Cannot delete medicine with ID: " + id + " because there are existing related transactions.");
         }
         medicineRepository.deleteById(id);
     }
 
-    // Convert Entity to DTO
+    /**
+     * Converts a Medicine entity to a MedicineDTO.
+     * @param medicine the Medicine entity to convert.
+     * @return a MedicineDTO containing the data from the entity.
+     */
     private MedicineDTO convertToDTO(Medicine medicine) {
         MedicineDTO dto = new MedicineDTO();
         dto.setId(medicine.getId());
@@ -105,7 +148,11 @@ public class MedicineService {
         return dto;
     }
 
-    // Convert DTO to Entity
+    /**
+     * Converts a MedicineDTO to a Medicine entity.
+     * @param dto the MedicineDTO to convert.
+     * @return a Medicine entity containing the data from the DTO.
+     */
     private Medicine convertToEntity(MedicineDTO dto) {
         Medicine medicine = new Medicine();
         medicine.setId(dto.getId());
@@ -117,7 +164,12 @@ public class MedicineService {
     }
 
 
-    // Update Entity with DTO
+    /**
+     * Updates an existing Medicine entity with data from a MedicineDTO.
+     *
+     * @param medicine the existing Medicine entity to update.
+     * @param dto the MedicineDTO containing updated data.
+     */
     private void updateEntity(Medicine medicine, MedicineDTO dto) {
         if (dto.getName() != null) medicine.setName(dto.getName());
         if (dto.getDescription() != null) medicine.setDescription(dto.getDescription());

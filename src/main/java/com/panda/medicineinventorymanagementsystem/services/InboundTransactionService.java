@@ -21,15 +21,26 @@ public class InboundTransactionService {
     private final InboundTransactionRepository inboundTransactionRepository;
     private final MedicineRepository medicineRepository;
 
-    //Construct injection
+    /**
+     * Constructor for InboundTransactionService with dependency injection.
+     * @param inboundTransactionRepository repository for accessing inbound transaction data
+     * @param medicineRepository repository for accessing medicine data
+     */
     @Autowired
     public InboundTransactionService(InboundTransactionRepository inboundTransactionRepository, MedicineRepository medicineRepository) {
         this.inboundTransactionRepository = inboundTransactionRepository;
         this.medicineRepository = medicineRepository;
     }
 
+    /**
+     * Adds a list of inbound transactions and updates the stock quantities for the medicines involved.
+     * @param transactionsDTO list of InboundTransactionDTO objects representing the new transactions
+     * @return list of InboundTransactionDTO objects after saving to database
+     * @throws IllegalStateException if a referenced medicine is not found in the database
+     */
     @Transactional
     public List<InboundTransactionDTO> addInboundTransactions(List<InboundTransactionDTO> transactionsDTO) {
+        // Convert the list of InboundTransactionDTOs to InboundTransaction entities using the convertToEntity method
         List<InboundTransaction> transactions = transactionsDTO.stream()
                 .map(this::convertToEntity)
                 .collect(Collectors.toList());
@@ -69,22 +80,35 @@ public class InboundTransactionService {
     }
 
 
-
-    //Retrieve all transactions
+    /**
+     * Retrieves all inbound transactions in a paginated format.
+     * @param pageable the pagination and sorting information
+     * @return Page of InboundTransactionDTO
+     */
     public Page<InboundTransactionDTO> getAllInboundTransactions(Pageable pageable) {
         return inboundTransactionRepository.findAll(pageable)
                 .map(this::convertToDTO);
     }
 
 
-    // Retrieve a single transaction by ID
+    /**
+     * Retrieves a single inbound transaction by its ID.
+     * @param id the ID of the transaction to retrieve
+     * @return InboundTransactionDTO of the retrieved transaction
+     * @throws RuntimeException if no transaction is found with the given ID
+     */
     public InboundTransactionDTO getInboundTransactionById(Integer id) {
         InboundTransaction transaction = inboundTransactionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Inbound transaction not found with ID: " + id));
         return convertToDTO(transaction);
     }
 
-    // Retrieve transactions by medicineId
+    /**
+     * Retrieves all transactions associated with a specific medicine ID.
+     * @param medicineId the ID of the medicine
+     * @return list of InboundTransactionDTO
+     * @throws RuntimeException if no transactions are found for the medicine ID
+     */
     public List<InboundTransactionDTO> getTransactionsByMedicineId(Integer medicineId) {
         List<InboundTransaction> transactions = inboundTransactionRepository.findByMedicineId(medicineId);
         if (transactions.isEmpty()) {
@@ -95,27 +119,11 @@ public class InboundTransactionService {
                 .collect(Collectors.toList());
     }
 
-
-
-/*
-    // Method to update a transaction
-    @Transactional
-    public InboundTransactionDTO updateInboundTransaction(Integer id, InboundTransactionDTO updatedTransactionDTO) {
-        InboundTransaction transaction = inboundTransactionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Inbound transaction not found with ID: " + id));
-        updateEntity(transaction, updatedTransactionDTO);
-        InboundTransaction updatedTransaction = inboundTransactionRepository.save(transaction);
-        return convertToDTO(updatedTransaction);
-    }
-
-    // Method to delete a transaction
-    @Transactional
-    public void deleteInboundTransaction(Integer id) {
-        InboundTransaction transaction = inboundTransactionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + id));
-        inboundTransactionRepository.delete(transaction);
-    }*/
-
+    /**
+     * Converts a transaction entity to its DTO form.
+     * @param transaction the entity to convert
+     * @return the DTO form of the transaction
+     */
     private InboundTransactionDTO convertToDTO(InboundTransaction transaction) {
         InboundTransactionDTO dto = new InboundTransactionDTO();
         dto.setId(transaction.getId());
@@ -128,6 +136,11 @@ public class InboundTransactionService {
         return dto;
     }
 
+    /**
+     * Converts a DTO to its entity form for persistence.
+     * @param dto the DTO to convert
+     * @return the entity form of the DTO
+     */
     private InboundTransaction convertToEntity(InboundTransactionDTO dto) {
         InboundTransaction transaction = new InboundTransaction();
         Medicine medicine = medicineRepository.findById(dto.getMedicineId()).orElseThrow(() -> new RuntimeException("Medicine not found with ID: " + dto.getMedicineId()));
@@ -136,31 +149,5 @@ public class InboundTransactionService {
         transaction.setSupplier(dto.getSupplier());
         return transaction;
     }
-
-/*
-    private void updateEntity(InboundTransaction transaction, InboundTransactionDTO dto) {
-        Medicine medicine = transaction.getMedicine();
-
-        // Calculate the old and new quantity difference
-        int oldQuantity = transaction.getQuantity();
-        int newQuantity = dto.getQuantity();
-        int quantityDifference = newQuantity - oldQuantity;
-
-        // Update transaction details
-        transaction.setQuantity(newQuantity);
-        transaction.setSupplier(dto.getSupplier());
-
-        // Update the medicine stock
-        int updatedMedicineStock = medicine.getQuantity() + quantityDifference;
-        medicine.setQuantity(updatedMedicineStock);
-
-        // Set the updated transaction quantity after modification
-        transaction.setUpdateTransactionQuantity(updatedMedicineStock);
-
-        // Log changes (ensure logger is configured)
-        logger.info("Updated transaction ID {}: from {} to {}. New medicine stock: {}", transaction.getId(), oldQuantity, newQuantity, updatedMedicineStock);
-    }
-*/
-
 
 }

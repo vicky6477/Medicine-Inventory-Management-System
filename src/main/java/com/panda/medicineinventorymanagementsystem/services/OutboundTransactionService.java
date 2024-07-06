@@ -5,7 +5,6 @@ import com.panda.medicineinventorymanagementsystem.entity.Medicine;
 import com.panda.medicineinventorymanagementsystem.entity.OutboundTransaction;
 import com.panda.medicineinventorymanagementsystem.repository.MedicineRepository;
 import com.panda.medicineinventorymanagementsystem.repository.OutboundTransactionRepository;
-import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -23,18 +22,26 @@ public class OutboundTransactionService {
     private final OutboundTransactionRepository outboundTransactionRepository;
     private final MedicineRepository medicineRepository;
 
-    //Construct injection
+    /**
+     * Constructor for OutboundTransactionService with dependency injection.
+     * @param outboundTransactionRepository Repository for managing outbound transaction data.
+     * @param medicineRepository Repository for accessing medicine data.
+     */
     @Autowired
     public OutboundTransactionService(OutboundTransactionRepository outboundTransactionRepository, MedicineRepository medicineRepository) {
         this.outboundTransactionRepository = outboundTransactionRepository;
         this.medicineRepository = medicineRepository;
     }
-    @Autowired
-    private EntityManager entityManager;
 
-    //Create medicines outbound transactions
+    /**
+     * Creates outbound transactions for medicines, updating stock levels accordingly.
+     * @param transactionsDTO List of OutboundTransactionDTO containing transaction details.
+     * @return List of OutboundTransactionDTO after saving the transactions to the database.
+     * @throws IllegalStateException if medicine is not found or stock is insufficient.
+     */
     @Transactional
     public List<OutboundTransactionDTO> addOutboundTransactions(List<OutboundTransactionDTO> transactionsDTO) {
+        // Convert the list of OutboundTransactionDTOs to OutboundTransaction entities using the convertToEntity method
         List<OutboundTransaction> transactions = transactionsDTO.stream()
                 .map(this::convertToEntity)
                 .collect(Collectors.toList());
@@ -76,20 +83,34 @@ public class OutboundTransactionService {
     }
 
 
-    //Retrieve all outbound transactions
+    /**
+     * Retrieves all outbound transactions in a paginated format.
+     * @param pageable Pagination details.
+     * @return Page of OutboundTransactionDTO.
+     */
     public Page<OutboundTransactionDTO> getAllOutboundTransactions(Pageable pageable) {
         return outboundTransactionRepository.findAll(pageable)
                 .map(this::convertToDTO);
     }
 
-    //Retrieve a single transaction by id
+    /**
+     * Retrieves a specific outbound transaction by its ID.
+     * @param id The ID of the transaction.
+     * @return OutboundTransactionDTO.
+     * @throws RuntimeException if the transaction is not found.
+     */
     public OutboundTransactionDTO getOutboundTransactionById(Integer id) {
         OutboundTransaction transaction = outboundTransactionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Outbound transaction not found with ID: " + id));
         return convertToDTO(transaction);
     }
 
-    // Retrieve transactions by medicineId
+    /**
+     * Retrieves all outbound transactions associated with a specific medicine ID.
+     * @param medicineId The ID of the medicine.
+     * @return List of OutboundTransactionDTO.
+     * @throws RuntimeException if no transactions are found for the medicine ID.
+     */
     public List<OutboundTransactionDTO> getTransactionsByMedicineId(Integer medicineId) {
         List<OutboundTransaction> transactions = outboundTransactionRepository.findByMedicineId(medicineId);
         if (transactions.isEmpty()) {
@@ -100,20 +121,11 @@ public class OutboundTransactionService {
                 .collect(Collectors.toList());
     }
 
-/*    @Transactional
-    public OutboundTransaction updateOutboundTransaction(Integer id, OutboundTransaction updatedTransaction) {
-        OutboundTransaction transaction = getOutboundTransactionById(id);
-        transaction.setQuantity(updatedTransaction.getQuantity());
-        transaction.setMedicine(updatedTransaction.getMedicine());
-        return outboundTransactionRepository.save(transaction);
-    }
-
-    @Transactional
-    public void deleteOutboundTransaction(Integer id) {
-        OutboundTransaction transaction = getOutboundTransactionById(id);
-        outboundTransactionRepository.delete(transaction);
-    }*/
-
+    /**
+     * Converts an OutboundTransaction entity to DTO format.
+     * @param transaction The OutboundTransaction entity.
+     * @return OutboundTransactionDTO.
+     */
     private OutboundTransactionDTO convertToDTO(OutboundTransaction transaction) {
         OutboundTransactionDTO dto = new OutboundTransactionDTO();
         dto.setId(transaction.getId());
@@ -126,6 +138,11 @@ public class OutboundTransactionService {
         return dto;
     }
 
+    /**
+     * Converts an OutboundTransactionDTO to an entity format.
+     * @param dto The OutboundTransactionDTO.
+     * @return OutboundTransaction.
+     */
     private OutboundTransaction convertToEntity(OutboundTransactionDTO dto) {
         OutboundTransaction transaction = new OutboundTransaction();
         Medicine medicine = medicineRepository.findById(dto.getMedicineId()).orElseThrow(() -> new RuntimeException("Medicine not found with ID: " + dto.getMedicineId()));
