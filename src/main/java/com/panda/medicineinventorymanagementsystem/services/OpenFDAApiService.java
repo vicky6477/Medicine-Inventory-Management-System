@@ -21,18 +21,28 @@ public class OpenFDAApiService {
     @Value("${api.key}")
     private String apiKey;
 
+    /**
+     * Constructor for initializing the OpenFDAApiService with a RestTemplate.
+     * @param restTemplate the RestTemplate used for making HTTP requests.
+     */
     public OpenFDAApiService(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
 
-    // Service method to fetch medicine data from openFDA
+    /**
+     * Fetches medicine data from the openFDA API based on the provided medicine name and create medicine.
+     * @param name the name of the medicine to search for.
+     * @param defaultMedicineDTO the default MedicineDTO to use if parsing succeeds.
+     * @return an Optional containing a filled MedicineDTO if the API call is successful and data is found; otherwise, an empty Optional.
+     */
     public Optional<MedicineDTO> fetchMedicineData(String name, @Valid MedicineDTO defaultMedicineDTO) {
-        try {
+        try {//fetch from openFDA
             String encodedName = URLEncoder.encode(name, StandardCharsets.UTF_8.toString());
             String url = "https://api.fda.gov/drug/label.json?api_key=" + apiKey + "&search=" + encodedName;
             String result = restTemplate.getForObject(url, String.class);
             JSONObject json = new JSONObject(result);
 
+            //Parses the JSON result from the FDA to find a matching medicine
             if (json.has("results")) {
                 JSONArray results = json.getJSONArray("results");
                 for (int i = 0; i < results.length(); i++) {
@@ -58,8 +68,12 @@ public class OpenFDAApiService {
         return Optional.empty();
     }
 
-
-    //parse description
+    /**
+     * Parses medicine details from JSON and updates the provided MedicineDTO.
+     * @param details the JSON object containing the medicine details.
+     * @param medicineDTO the MedicineDTO to populate.
+     * @return the populated MedicineDTO.
+     */
     private MedicineDTO parseMedicine(JSONObject details, MedicineDTO medicineDTO) {
         try {
             String description = findBestMatch(details, "description");
@@ -83,7 +97,12 @@ public class OpenFDAApiService {
     }
 
 
-    //find useful in openfda
+    /**
+     * Finds the best matching string in a JSON object for a given key.
+     * @param details the JSON object containing the data.
+     * @param key the key for which to find the data.
+     * @return the best matching string or an empty string if not found.
+     */
     private String findBestMatch(JSONObject details, String key) {
         try {
             if (!details.has(key) || details.get(key) == JSONObject.NULL) return "";

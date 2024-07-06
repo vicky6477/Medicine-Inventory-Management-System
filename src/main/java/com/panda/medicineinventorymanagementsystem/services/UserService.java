@@ -52,8 +52,11 @@ public class UserService {
 
     //delete a user by ID
     public Boolean deleteUserById(Integer id) {
+        if (!userRepository.existsById(id)) {
+            throw new RuntimeException("User not found with id: " + id);
+        }
         userRepository.deleteById(id);
-        return !userRepository.existsById(id);
+        return true;
     }
 
     // Convert Entity to DTO
