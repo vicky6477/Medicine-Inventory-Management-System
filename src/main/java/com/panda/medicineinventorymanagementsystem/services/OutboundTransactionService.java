@@ -82,7 +82,6 @@ public class OutboundTransactionService {
                 .collect(Collectors.toList());
     }
 
-
     /**
      * Retrieves all outbound transactions in a paginated format.
      * @param pageable Pagination details.
