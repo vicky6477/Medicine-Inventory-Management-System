@@ -3,11 +3,14 @@ package com.panda.medicineinventorymanagementsystem.dto;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
+import lombok.*;
 
 import java.util.Date;
 
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class InboundTransactionDTO {
     private Integer id;
 

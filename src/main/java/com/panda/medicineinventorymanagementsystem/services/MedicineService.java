@@ -55,11 +55,6 @@ public class MedicineService {
             throw new IllegalStateException("Medicine with name '" + name + "' already exists");
         }
 
-        //check if the input type correct
-        if (!Type.isValidType(inputMedicineDTO.getType())) {
-            throw new IllegalArgumentException("Invalid type provided: " + inputMedicineDTO.getType());
-        }
-
         // Set default values for properties not set
         if (inputMedicineDTO.getQuantity() == null) {
             inputMedicineDTO.setQuantity(0);
@@ -109,9 +104,6 @@ public class MedicineService {
     public MedicineDTO updateMedicineById(Integer id, MedicineDTO medicineDTO) {
         Medicine existingMedicine = medicineRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Medicine not found with ID: " + id));
-        if (!Type.isValidType(medicineDTO.getType())) {
-            throw new IllegalArgumentException("Invalid type provided: " + medicineDTO.getType());
-        }
 
         updateEntity(existingMedicine, medicineDTO);
         Medicine updatedMedicine = medicineRepository.save(existingMedicine);
