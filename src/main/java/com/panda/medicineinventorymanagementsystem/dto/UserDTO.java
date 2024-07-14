@@ -4,12 +4,20 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+
 public class UserDTO {
     private Integer id;
+
     @NotBlank(message = "Username is required")
     @Size(min = 3, max = 10, message = "Username must be between 3 and 10 characters")
     private String username;
@@ -27,8 +35,12 @@ public class UserDTO {
 
     @NotBlank(message = "Name is required")
     private String name;
+
     private Integer age;
+
     private String gender;
+
     private LocalDateTime createdAt;
+
     private LocalDateTime updatedAt;
 }

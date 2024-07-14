@@ -2,6 +2,7 @@ package com.panda.medicineinventorymanagementsystem.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -12,6 +13,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class Medicine {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
