@@ -14,11 +14,11 @@ import lombok.*;
 public class MedicineDTO {
 
     private Integer id;
-    @NotBlank(message = "Name must not be blank")
 
+    @NotBlank(message = "Name must not be blank")
     private String name;
 
-    @Size(max = 255, message = "Description must not exceed 1000 characters")
+    @Size(max = 255, message = "Description must not exceed 250 characters")
     private String description;
 
     private Integer quantity;

@@ -26,13 +26,13 @@ public class InboundTransaction {
     @Column(nullable = false)
     private Integer quantity;
 
-    @Column(nullable = false)
+    @Column
     private Integer originalMedicineQuantity;
 
-    @Column(nullable = false)
+    @Column
     private Integer updateTransactionQuantity;
 
-    @Column(name = "received_date", nullable = false)
+    @Column(name = "received_date")
     private Date receivedDate;
 
     @Column(nullable = false)

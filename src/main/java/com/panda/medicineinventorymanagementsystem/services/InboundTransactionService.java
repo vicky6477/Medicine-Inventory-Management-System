@@ -3,8 +3,10 @@ package com.panda.medicineinventorymanagementsystem.services;
 import com.panda.medicineinventorymanagementsystem.dto.InboundTransactionDTO;
 import com.panda.medicineinventorymanagementsystem.entity.InboundTransaction;
 import com.panda.medicineinventorymanagementsystem.entity.Medicine;
+import com.panda.medicineinventorymanagementsystem.mapper.InboundTransactionMapper;
 import com.panda.medicineinventorymanagementsystem.repository.InboundTransactionRepository;
 import com.panda.medicineinventorymanagementsystem.repository.MedicineRepository;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -20,6 +22,7 @@ import java.util.stream.Collectors;
 public class InboundTransactionService {
     private final InboundTransactionRepository inboundTransactionRepository;
     private final MedicineRepository medicineRepository;
+    private final InboundTransactionMapper inboundTransactionMapper;
 
     /**
      * Constructor for InboundTransactionService with dependency injection.
@@ -28,20 +31,22 @@ public class InboundTransactionService {
      * @param medicineRepository           repository for accessing medicine data
      */
     @Autowired
-    public InboundTransactionService(InboundTransactionRepository inboundTransactionRepository, MedicineRepository medicineRepository) {
+    public InboundTransactionService(InboundTransactionRepository inboundTransactionRepository, MedicineRepository medicineRepository, InboundTransactionMapper inboundTransactionMapper) {
         this.inboundTransactionRepository = inboundTransactionRepository;
         this.medicineRepository = medicineRepository;
+        this.inboundTransactionMapper = inboundTransactionMapper;
     }
 
     /**
-     * Adds a list of inbound transactions and updates the stock quantities for the medicines involved.
+     * Processes and saves a list of inbound transactions by reducing stock quantities.
      *
-     * @param transactionsDTO list of InboundTransactionDTO objects representing the new transactions
-     * @return list of InboundTransactionDTO objects after saving to database
-     * @throws IllegalStateException if a referenced medicine is not found in the database
+     * @param transactionsDTO List of inbound transaction data transfer objects.
+     * @return List of processed and persisted InboundTransaction entities.
+     * @throws EntityNotFoundException if any specified medicine is not found.
+     * @throws IllegalStateException if any medicine has insufficient stock.
      */
     @Transactional
-    public List<InboundTransactionDTO> addInboundTransactions(List<InboundTransactionDTO> transactionsDTO) {
+    public List<InboundTransaction> addInboundTransactions(List<InboundTransactionDTO> transactionsDTO) {
         // Extract IDs and check if all medicines exist
         Set<Integer> medicineIds = transactionsDTO.stream()
                 .map(InboundTransactionDTO::getMedicineId)
@@ -53,16 +58,16 @@ public class InboundTransactionService {
 
 
         // Check if all medicines are found, and find the missing id
-        Set<Integer> missingMedicines = medicineIds.stream()
-                .filter(id -> !medicines.containsKey(id))
-                .collect(Collectors.toSet());
-        if (!missingMedicines.isEmpty()) {
-            throw new IllegalStateException("Medicines not found for IDs: " + missingMedicines);
+        Set<Integer> foundIds = medicines.keySet();
+        if (medicineIds.size() > foundIds.size()) {
+            medicineIds.removeAll(foundIds);
+            throw new EntityNotFoundException("Medicines not found for IDs: " + medicineIds);
         }
+
 
         // All medicines exist, convert DTOs to entities
         List<InboundTransaction> transactions = transactionsDTO.stream()
-                .map(dto -> convertToEntity(dto, medicines))
+                .map(dto -> inboundTransactionMapper.toEntity(dto, medicines))
                 .collect(Collectors.toList());
 
         // Process each transaction to update the medicine quantity and validate the transaction
@@ -80,90 +85,46 @@ public class InboundTransactionService {
 
         // Save all updated medicines and transactions
         medicineRepository.saveAll(medicines.values());
-        List<InboundTransaction> savedTransactions = inboundTransactionRepository.saveAll(transactions);
-        return savedTransactions.stream().map(this::convertToDTO).collect(Collectors.toList());
+        return inboundTransactionRepository.saveAll(transactions);
     }
 
 
     /**
      * Retrieves all inbound transactions in a paginated format.
      *
-     * @param pageable the pagination and sorting information
-     * @return Page of InboundTransactionDTO
+     * @param pageable Pagination and sorting information.
+     * @return Page containing outbound transactions.
      */
-    public Page<InboundTransactionDTO> getAllInboundTransactions(Pageable pageable) {
-        return inboundTransactionRepository.findAll(pageable)
-                .map(this::convertToDTO);
+    public Page<InboundTransaction> getAllInboundTransactions(Pageable pageable) {
+        return inboundTransactionRepository.findAll(pageable);
     }
 
 
     /**
-     * Retrieves a single inbound transaction by its ID.
+     * Retrieves a specific inbound transaction by its ID.
      *
-     * @param id the ID of the transaction to retrieve
-     * @return InboundTransactionDTO of the retrieved transaction
-     * @throws RuntimeException if no transaction is found with the given ID
+     * @param id The ID of the inbound transaction to retrieve.
+     * @return The requested InboundTransaction entity.
+     * @throws EntityNotFoundException if the transaction is not found.
      */
-    public InboundTransactionDTO getInboundTransactionById(Integer id) {
-        InboundTransaction transaction = inboundTransactionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Inbound transaction not found with ID: " + id));
-        return convertToDTO(transaction);
+    public InboundTransaction getInboundTransactionById(Integer id) {
+        return inboundTransactionRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Inbound transaction not found with ID: " + id));
     }
 
     /**
-     * Retrieves all transactions associated with a specific medicine ID.
+     * Retrieves all inbound transactions associated with a specific medicine ID.
      *
-     * @param medicineId the ID of the medicine
-     * @return list of InboundTransactionDTO
-     * @throws RuntimeException if no transactions are found for the medicine ID
+     * @param medicineId The ID of the medicine to find transactions for.
+     * @return List of InboundTransaction entities.
+     * @throws EntityNotFoundException if no transactions are found for the given medicine ID.
      */
-    public List<InboundTransactionDTO> getTransactionsByMedicineId(Integer medicineId) {
+    public List<InboundTransaction> getTransactionsByMedicineId(Integer medicineId) {
         List<InboundTransaction> transactions = inboundTransactionRepository.findByMedicineId(medicineId);
         if (transactions.isEmpty()) {
-            throw new RuntimeException("Inbound transactions not found for medicine ID: " + medicineId);
+            throw new EntityNotFoundException("No inbound transactions found for medicine ID: " + medicineId);
         }
-        return transactions.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Converts a transaction entity to its DTO form.
-     *
-     * @param transaction the entity to convert
-     * @return the DTO form of the transaction
-     */
-    private InboundTransactionDTO convertToDTO(InboundTransaction transaction) {
-        InboundTransactionDTO dto = new InboundTransactionDTO();
-        dto.setId(transaction.getId());
-        dto.setMedicineId(transaction.getMedicine().getId());
-        dto.setQuantity(transaction.getQuantity());
-        dto.setOriginalMedicineQuantity(transaction.getOriginalMedicineQuantity());
-        dto.setUpdateTransactionQuantity(transaction.getUpdateTransactionQuantity());
-        dto.setReceivedDate(transaction.getReceivedDate());
-        dto.setSupplier(transaction.getSupplier());
-        return dto;
-    }
-
-    /**
-     * Converts an InboundTransactionDTO to an InboundTransaction entity.
-     * @param dto The InboundTransactionDTO to convert.
-     * @param medicineMap A map of Medicine entities indexed by their IDs, used to fetch the Medicine
-     *                    associated with the DTO.
-     * @return InboundTransaction The fully constructed InboundTransaction entity, ready for persistence.
-     * @throws IllegalStateException If the medicine associated with the DTO's medicineId does not exist
-     *                               in the provided medicine map.
-     */
-    private InboundTransaction convertToEntity(InboundTransactionDTO dto, Map<Integer, Medicine> medicineMap) {
-        InboundTransaction transaction = new InboundTransaction();
-        Medicine medicine = medicineMap.get(dto.getMedicineId());
-        if (medicine == null) {
-            throw new IllegalStateException("Medicine not found for ID: " + dto.getMedicineId());
-        }
-        transaction.setMedicine(medicine);
-        transaction.setQuantity(dto.getQuantity());
-        transaction.setSupplier(dto.getSupplier());
-        return transaction;
+        return transactions;
     }
 
 }

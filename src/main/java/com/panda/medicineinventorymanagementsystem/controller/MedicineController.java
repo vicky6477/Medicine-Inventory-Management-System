@@ -1,58 +1,52 @@
 package com.panda.medicineinventorymanagementsystem.controller;
 
 import com.panda.medicineinventorymanagementsystem.dto.MedicineDTO;
+import com.panda.medicineinventorymanagementsystem.entity.Medicine;
+import com.panda.medicineinventorymanagementsystem.mapper.MedicineMapper;
 import com.panda.medicineinventorymanagementsystem.services.MedicineService;
-import com.panda.medicineinventorymanagementsystem.util.ControllerHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Pageable;
 import jakarta.validation.Valid;
-
-import java.util.Map;
 
 
 @RestController
 @RequestMapping("/medicines")
 public class MedicineController {
     private final MedicineService medicineService;
+    private final MedicineMapper medicineMapper;
 
-    public MedicineController(MedicineService medicineService) {
+    public MedicineController(MedicineService medicineService, MedicineMapper medicineMapper) {
         this.medicineService = medicineService;
+        this.medicineMapper = medicineMapper;
     }
 
     @PostMapping
     @Operation(summary = "Create a new medicine", description = "Adds a new medicine to the system.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Medicine created successfully",
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Medicine updated successfully",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = MedicineDTO.class))),
-            @ApiResponse(responseCode = "400", description = "Validation error: type must be one of the predefined types.",
-                    content = @Content(mediaType = "application/json")),
-            @ApiResponse(responseCode = "409", description = "Conflict, duplicate medicine name.", content = @Content()),
+            @ApiResponse(responseCode = "400", description = "Validation error",
+                    content = @Content(mediaType = "application/json", examples = {
+                            @ExampleObject(name = "Validation Error: Name",
+                                    value = "{\"errors\": {\"name\": \"Name must not be blank\"}}"),
+                            @ExampleObject(name = "Validation Error: Type",
+                                    value = "{\"errors\": {\"type\": \"Type must be one of the predefined types: PRES, OTC, OTHER\"}}"),
+                            @ExampleObject(name = "Validation Error: Description",
+                                    value = "{\"errors\": {\"description\": \"Description must not exceed 250 characters\"}}")
+                    })),
+            @ApiResponse(responseCode = "409", description = "Conflict, duplicate medicine name.", content = @Content())
     })
-    public ResponseEntity<?> createMedicine(@Valid @RequestBody MedicineDTO medicineDTO, BindingResult bindingResult) {
-        if (bindingResult.hasErrors()) {
-            Map<String, String> errors = ControllerHelper.formatBindingErrors(bindingResult);
-            return ResponseEntity.badRequest().body(errors);
-        }
-        try {
-            MedicineDTO createdMedicine = medicineService.createOrFetchMedicine(medicineDTO.getName(), medicineDTO);
-            return ResponseEntity.ok(createdMedicine);
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid type provided.");
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Invalid type provided.");
-        }
+    public ResponseEntity<MedicineDTO> createMedicine(@Valid @RequestBody MedicineDTO medicineDTO) {
+        Medicine createdMedicine = medicineService.createOrFetchMedicine(medicineDTO.getName(), medicineDTO);
+        return ResponseEntity.ok(medicineMapper.toDTO(createdMedicine));
     }
 
     @GetMapping("/{id}")
@@ -60,13 +54,9 @@ public class MedicineController {
     @ApiResponse(responseCode = "200", description = "Medicine found",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = MedicineDTO.class)))
     @ApiResponse(responseCode = "404", description = "Medicine not found with this id")
-    public ResponseEntity<?> getMedicineById(@PathVariable Integer id) {
-        try {
-            MedicineDTO medicineDTO = medicineService.getMedicineById(id);
-            return ResponseEntity.ok(medicineDTO);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        }
+    public ResponseEntity<MedicineDTO> getMedicineById(@PathVariable Integer id) {
+        Medicine medicine = medicineService.getMedicineById(id);
+        return ResponseEntity.ok(medicineMapper.toDTO(medicine));
     }
 
     @GetMapping
@@ -74,7 +64,8 @@ public class MedicineController {
     @ApiResponse(responseCode = "200", description = "Medicines retrieved successfully",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = Page.class)))
     public ResponseEntity<Page<MedicineDTO>> getAllMedicines(Pageable pageable) {
-        return ResponseEntity.ok(medicineService.findAllMedicines(pageable));
+        Page<Medicine> medicines = medicineService.findAllMedicines(pageable);
+        return ResponseEntity.ok(medicines.map(medicineMapper::toDTO));
     }
 
 
@@ -83,25 +74,22 @@ public class MedicineController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Medicine updated successfully",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = MedicineDTO.class))),
-            @ApiResponse(responseCode = "400", description = "Validation error: type must be one of the predefined types.",
-                    content = @Content(mediaType = "application/json")),
-            @ApiResponse(responseCode = "404", description = "Medicine not found with this id")
+            @ApiResponse(responseCode = "400", description = "Validation error",
+                    content = @Content(mediaType = "application/json", examples = {
+                            @ExampleObject(name = "Validation Error: Name",
+                                    value = "{\"errors\": {\"name\": \"Name must not be blank\"}}"),
+                            @ExampleObject(name = "Validation Error: Type",
+                                    value = "{\"errors\": {\"type\": \"Type must be one of the predefined types: PRES, OTC, OTHER\"}}"),
+                            @ExampleObject(name = "Validation Error: Description",
+                                    value = "{\"errors\": {\"description\": \"Description must not exceed 250 characters\"}}")
+                    })),
+            @ApiResponse(responseCode = "409", description = "Conflict, duplicate medicine name.", content = @Content())
     })
-    public ResponseEntity<?> updateMedicineById(@PathVariable Integer id, @Valid @RequestBody MedicineDTO medicineDTO, BindingResult bindingResult) {
-        if (bindingResult.hasErrors()) {
-            Map<String, String> errors = ControllerHelper.formatBindingErrors(bindingResult);
-            return ResponseEntity.badRequest().body(errors);
-        }
-        try {
-            MedicineDTO updatedMedicine = medicineService.updateMedicineById(id, medicineDTO);
-            return ResponseEntity.ok(updatedMedicine);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred.");
-        }
-    }
+    public ResponseEntity<MedicineDTO> updateMedicineById(@PathVariable Integer id, @Valid @RequestBody MedicineDTO medicineDTO) {
+        Medicine updatedMedicine = medicineService.updateMedicineById(id, medicineDTO);
+        return ResponseEntity.ok(medicineMapper.toDTO(updatedMedicine));
 
+    }
 
 
     @DeleteMapping("/{id}")
@@ -110,11 +98,7 @@ public class MedicineController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = Boolean.class)))
     @ApiResponse(responseCode = "404", description = "Medicine not found with this id")
     public ResponseEntity<String> deleteMedicine(@PathVariable Integer id) {
-        try {
-            medicineService.deleteMedicine(id);
-            return ResponseEntity.ok("Medicine deleted successfully.");
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        }
+        medicineService.deleteMedicine(id);
+        return ResponseEntity.ok("Medicine deleted successfully.");
     }
 }
