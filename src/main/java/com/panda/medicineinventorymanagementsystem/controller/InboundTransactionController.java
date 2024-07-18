@@ -57,21 +57,21 @@ public class InboundTransactionController {
                 .collect(Collectors.toList());
         return ResponseEntity.ok(transactionDTOs);
     }
-//    public ResponseEntity<?> createInboundTransactions(@Valid @RequestBody List<InboundTransactionDTO> transactionsDTO, BindingResult bindingResult) {
-//        if (bindingResult.hasErrors()) {
-//            Map<String, String> errors = ControllerHelper.formatBindingErrors(bindingResult);
-//            return ResponseEntity.badRequest().body(errors);
-//        }
-//        try {
-//            List<InboundTransaction> transactions = inboundTransactionService.addInboundTransactions(transactionsDTO);
-//            List<InboundTransactionDTO> transactionDTOs = transactions.stream()
-//                    .map(inboundTransactionMapper::toDTO)
-//                    .collect(Collectors.toList());
-//            return ResponseEntity.ok(transactionDTOs);
-//        } catch (RuntimeException e) {
-//            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-//        }
-//    }
+    public ResponseEntity<?> createInboundTransactions(@Valid @RequestBody List<InboundTransactionDTO> transactionsDTO, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            Map<String, String> errors = ControllerHelper.formatBindingErrors(bindingResult);
+            return ResponseEntity.badRequest().body(errors);
+        }
+        try {
+            List<InboundTransaction> transactions = inboundTransactionService.addInboundTransactions(transactionsDTO);
+            List<InboundTransactionDTO> transactionDTOs = transactions.stream()
+                    .map(inboundTransactionMapper::toDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(transactionDTOs);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
     @GetMapping
     @Operation(summary = "List all inbound transactions", description = "Retrieve a paginated list of all inbound transactions in the system.")
     @ApiResponse(responseCode = "200", description = "Retrieve transactions successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Page.class)))
