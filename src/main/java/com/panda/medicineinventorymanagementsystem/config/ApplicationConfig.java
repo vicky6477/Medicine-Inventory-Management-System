@@ -1,6 +1,6 @@
 package com.panda.medicineinventorymanagementsystem.config;
 
-import com.panda.medicineinventorymanagementsystem.repository.PersonRepository;
+import com.panda.medicineinventorymanagementsystem.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,10 +16,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @Configuration
 public class ApplicationConfig {
 
-    private final PersonRepository userRepository;
+    private final UserRepository userRepository;
 
     @Autowired
-    public ApplicationConfig(PersonRepository userRepository) {
+    public ApplicationConfig(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 

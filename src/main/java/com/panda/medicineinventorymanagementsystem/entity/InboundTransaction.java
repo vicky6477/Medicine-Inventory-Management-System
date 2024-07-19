@@ -38,6 +38,10 @@ public class InboundTransaction {
     @Column(nullable = false)
     private String supplier;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "user_id")
+    private User user;
+
     @PrePersist
     protected void onCreate() {
         receivedDate = new Date();

@@ -1,8 +1,8 @@
 package com.panda.medicineinventorymanagementsystem.util;
 
-import com.panda.medicineinventorymanagementsystem.entity.Person;
+import com.panda.medicineinventorymanagementsystem.entity.User;
 import com.panda.medicineinventorymanagementsystem.entity.Role;
-import com.panda.medicineinventorymanagementsystem.repository.PersonRepository;
+import com.panda.medicineinventorymanagementsystem.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -13,13 +13,13 @@ import java.time.LocalDateTime;
 @Component
 public class DataLoader implements CommandLineRunner {
 
-    private PersonRepository personRepository;
+    private UserRepository userRepository;
 
     private PasswordEncoder encoder;
 
     @Autowired
-    public DataLoader(PersonRepository personRepository, PasswordEncoder encoder) {
-        this.personRepository = personRepository;
+    public DataLoader(UserRepository userRepository, PasswordEncoder encoder) {
+        this.userRepository = userRepository;
         this.encoder = encoder;
     }
 
@@ -27,10 +27,10 @@ public class DataLoader implements CommandLineRunner {
     public void run(String... args) throws Exception {
         LocalDateTime now = LocalDateTime.now();
         // Add initial data to the database
-        if (personRepository.count() == 0) {
-            personRepository.save(new Person(null, "Léa Seydoux", "lea.seydoux@gmail.com", encoder.encode("123"), Role.ADMIN,now, now));
-            personRepository.save(new Person(null, "Angela Sarafyan", "angela.sarafyan@gmail.com", encoder.encode("123"), Role.USER,now, now));
-            personRepository.save(new Person(null, "Talulah Riley", "talulah.riley@gmail.com", encoder.encode("321"), Role.USER,now, now));
+        if (userRepository.count() == 0) {
+            userRepository.save(new User(null, "Léa Seydoux", "lea.seydoux@gmail.com", encoder.encode("123"), Role.ADMIN,now, now));
+            userRepository.save(new User(null, "Angela Sarafyan", "angela.sarafyan@gmail.com", encoder.encode("123"), Role.USER,now, now));
+            userRepository.save(new User(null, "Talulah Riley", "talulah.riley@gmail.com", encoder.encode("321"), Role.USER,now, now));
         }
     }
 }

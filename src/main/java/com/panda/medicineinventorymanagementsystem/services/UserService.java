@@ -1,145 +1,127 @@
-//package com.panda.medicineinventorymanagementsystem.services;
-//
-//import com.panda.medicineinventorymanagementsystem.dto.UserDTO;
-//import com.panda.medicineinventorymanagementsystem.entity.User;
-//import com.panda.medicineinventorymanagementsystem.repository.UserRepository;
-//import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.stereotype.Service;
-//
-//
-//import java.time.LocalDateTime;
-//import java.util.List;
-//import java.util.stream.Collectors;
-//
-//@Service
-//public class UserService {
-//    private final UserRepository userRepository;
-//
-//    /**
-//     * Constructs a UserService with a UserRepository.
-//     * @param userRepository the repository for user data access
-//     */
-//    @Autowired
-//    public UserService(UserRepository userRepository) {
-//        this.userRepository = userRepository;
-//    }
-//
-//
-//    /**
-//     * Creates a new user in the repository.
-//     * @param userDTO the data transfer object containing user data
-//     * @return UserDTO the persisted user data
-//     */
-//    public UserDTO createUser(UserDTO userDTO) {
-//        User user = convertToEntity(userDTO);
-//        user.setCreatedAt(LocalDateTime.now());
-//        user = userRepository.save(user);
-//        return convertToDTO(user);
-//    }
-//
-//    /**
-//     * Retrieves a user by their ID.
-//     * @param id the ID of the user to retrieve
-//     * @return UserDTO the user data transfer object
-//     * @throws RuntimeException if no user is found with the provided ID
-//     */
-//    public UserDTO getUserById(Integer id) {
-//        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found with id: " + id));
-//        return convertToDTO(user);
-//    }
-//
-//    /**
-//     * Retrieves all users from the repository.
-//     * @return List<UserDTO> a list of user data transfer objects
-//     */
-//    public List<UserDTO> getAllUsers() {
-//        List<User> users = userRepository.findAll();
-//        return users.stream().map(this::convertToDTO).collect(Collectors.toList());
-//    }
-//
-//    /**
-//     * Updates the details of an existing user.
-//     * @param id the ID of the user to update
-//     * @param userDTO the new user data for the update
-//     * @return UserDTO the updated user data
-//     * @throws RuntimeException if no user is found with the provided ID
-//     */
-//    public UserDTO updateUserById(Integer id, UserDTO userDTO) {
-//        User existingUser = userRepository.findById(id)
-//                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
-//        updateEntity(existingUser, userDTO);
-//        existingUser = userRepository.save(existingUser);
-//        return convertToDTO(existingUser);
-//    }
-//
-//    /**
-//     * Deletes a user by their ID.
-//     * @param id the ID of the user to delete
-//     * @return Boolean true if the deletion was successful
-//     * @throws RuntimeException if no user is found with the provided ID
-//     */
-//    public Boolean deleteUserById(Integer id) {
-//        if (!userRepository.existsById(id)) {
-//            throw new RuntimeException("User not found with id: " + id);
-//        }
-//        userRepository.deleteById(id);
-//        return true;
-//    }
-//
-//    /**
-//     * Converts a User entity to a UserDTO.
-//     * @param user the User entity to convert
-//     * @return UserDTO the converted user data transfer object
-//     */
-//    private UserDTO convertToDTO(User user) {
-//        UserDTO dto = new UserDTO();
-//        dto.setId(user.getId());
-//        dto.setUsername(user.getUsername());
-//        dto.setEmail(user.getEmail());
-//        dto.setRole(user.getRole());
-//        dto.setPassword(user.getPassword()); // Consider security implications
-//        dto.setName(user.getName());
-//        dto.setAge(user.getAge());
-//        dto.setGender(user.getGender());
-//        dto.setCreatedAt(user.getCreatedAt());
-//        dto.setUpdatedAt(user.getUpdatedAt());
-//        return dto;
-//    }
-//
-//    /**
-//     * Converts a UserDTO to a User entity.
-//     * @param dto the UserDTO to convert
-//     * @return User the User entity
-//     */
-//    private User convertToEntity(UserDTO dto) {
-//        User user = new User();
-//        user.setId(dto.getId());
-//        user.setUsername(dto.getUsername());
-//        user.setEmail(dto.getEmail());
-//        user.setRole(dto.getRole());
-//        user.setPassword(dto.getPassword());
-//        user.setName(dto.getName());
-//        user.setAge(dto.getAge());
-//        user.setGender(dto.getGender());
-//        user.setCreatedAt(dto.getCreatedAt());
-//        user.setUpdatedAt(dto.getUpdatedAt());
-//        return user;
-//    }
-//
-//    /**
-//     * Updates an existing User entity with data from a UserDTO.
-//     * @param user the User entity to update
-//     * @param dto the UserDTO containing updated data
-//     */
-//    private void updateEntity(User user, UserDTO dto) {
-//        user.setUsername(dto.getUsername());
-//        user.setEmail(dto.getEmail());
-//        user.setRole(dto.getRole());
-//        user.setPassword(dto.getPassword());
-//        user.setName(dto.getName());
-//        user.setAge(dto.getAge());
-//        user.setGender(dto.getGender());
-//        user.setUpdatedAt(LocalDateTime.now());
-//    }
-//
-//}
+package com.panda.medicineinventorymanagementsystem.services;
+
+import com.panda.medicineinventorymanagementsystem.config.JwtService;
+import com.panda.medicineinventorymanagementsystem.dto.AuthRequestDTO;
+import com.panda.medicineinventorymanagementsystem.dto.AuthResponseDTO;
+import com.panda.medicineinventorymanagementsystem.dto.UserRequestDTO;
+
+import com.panda.medicineinventorymanagementsystem.entity.Role;
+import com.panda.medicineinventorymanagementsystem.entity.User;
+import com.panda.medicineinventorymanagementsystem.exception.UserNotFoundException;
+import com.panda.medicineinventorymanagementsystem.repository.UserRepository;
+import jakarta.validation.ConstraintViolationException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class UserService {
+
+    private final UserRepository userRepository;
+
+    private final PasswordEncoder passwordEncoder;
+
+    private final JwtService jwtService;
+
+    private final AuthenticationManager authenticationManager;
+
+
+    public AuthResponseDTO registerUser(User user) {
+        // Check if email already exists
+        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+            throw new IllegalStateException("Email already exists.");
+        }
+
+        // Encode the password and save the user
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        userRepository.save(user);
+        String token = jwtService.generateToken(user);
+        return AuthResponseDTO
+                .builder()
+                .token(token)
+                .build();
+    }
+
+
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    public User getUserById(Integer id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + id));
+    }
+
+    public AuthResponseDTO loginUser(AuthRequestDTO authRequestDTO) {
+       authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        authRequestDTO.getEmail(),
+                        authRequestDTO.getPassword()
+                )
+        );
+
+        // find user
+        User user = userRepository.findByEmail(authRequestDTO.getEmail())
+                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + authRequestDTO.getEmail()));
+
+        String jwtToken = jwtService.generateToken(user);
+        return AuthResponseDTO.builder()
+                .token(jwtToken)
+                .build();
+    }
+
+    public User updateUser(Integer id, UserRequestDTO userRequestDTO) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + id));
+
+        if (userRequestDTO.getName() != null && !userRequestDTO.getName().isEmpty()) {
+            user.setName(userRequestDTO.getName());
+        }
+        if (userRequestDTO.getPassword() != null && !userRequestDTO.getPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(userRequestDTO.getPassword()));
+        }
+
+        return userRepository.save(user);
+    }
+
+    /**
+     * Deletes a user by their ID.
+     * @param id the ID of the user to delete
+     * @return Boolean true if the deletion was successful
+     * @throws RuntimeException if no user is found with the provided ID
+     */
+    public Boolean deleteUserById(Integer id) {
+        if (!userRepository.existsById(id)) {
+            throw new RuntimeException("User not found with id: " + id);
+        }
+        userRepository.deleteById(id);
+        return true;
+    }
+
+    /**
+     * Fetches the currently authenticated user from the security context.
+     * Assumes the 'username' in the UserDetails is the user's email.
+     *
+     * @return The authenticated User entity.
+     * @throws UsernameNotFoundException if the user is not found in the repository.
+     * @throws IllegalStateException if the security context does not hold a valid UserDetails.
+     */
+    public User getCurrentAuthenticatedUser() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserDetails) {
+            String email = ((UserDetails) principal).getUsername(); // Here, username is actually the email.
+            return userRepository.findByEmail(email)
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+        } else {
+            throw new IllegalStateException("User not found in session.");
+        }
+    }
+}

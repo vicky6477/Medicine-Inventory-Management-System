@@ -18,7 +18,7 @@ public class MedicineDTO {
     @NotBlank(message = "Name must not be blank")
     private String name;
 
-    @Size(max = 255, message = "Description must not exceed 250 characters")
+    @Size(max = 255, message = "Description must not exceed 255 characters")
     private String description;
 
     private Integer quantity;

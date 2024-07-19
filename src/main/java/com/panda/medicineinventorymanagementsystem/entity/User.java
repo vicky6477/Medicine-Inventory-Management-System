@@ -14,17 +14,18 @@ import java.util.Collection;
 import java.util.List;
 
 @Entity
-@Table(name = "persons")
+@Table(name = "users")
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
 @Builder
-public class Person implements UserDetails {
+public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     private String name;
+
     @Column(unique=true)
     private String email;
 
@@ -81,7 +82,7 @@ public class Person implements UserDetails {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public Person(Integer id, String name, String email, String password, Role role) {
+    public User(Integer id, String name, String email, String password, Role role) {
         this.id = id;
         this.name = name;
         this.email = email;

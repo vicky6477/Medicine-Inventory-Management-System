@@ -1,6 +1,9 @@
 package com.panda.medicineinventorymanagementsystem.config;
 
 import com.panda.medicineinventorymanagementsystem.filter.JwtAuthFilter;
+import com.panda.medicineinventorymanagementsystem.security.CustomAccessDeniedHandler;
+import com.panda.medicineinventorymanagementsystem.security.CustomAuthenticationEntryPoint;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.apache.catalina.User;
 import org.hibernate.StatelessSession;
@@ -10,6 +13,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -17,11 +21,15 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
@@ -40,24 +48,36 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(authorizeRequests ->
                         authorizeRequests
-                                .requestMatchers(HttpMethod.DELETE, "/persons/**").hasAuthority("ADMIN")
-                                .requestMatchers("/hello").permitAll()
-                                .requestMatchers(HttpMethod.POST,"/persons/**").permitAll()
-                                .requestMatchers(HttpMethod.POST,"/authenticate").permitAll()
-                                .requestMatchers("/persons/**").authenticated()
+                                .requestMatchers(HttpMethod.POST, "/users/signup", "/users/login").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/users/**").authenticated()
+                                .requestMatchers(HttpMethod.DELETE, "/users/**").hasAuthority("ADMIN")
+                                .requestMatchers(HttpMethod.POST, "/inbound/transactions/**").authenticated()
+                                .requestMatchers(HttpMethod.POST, "/outbound/transactions/**").authenticated()
+                                .requestMatchers("/users/**").authenticated()
+                                .requestMatchers("/medicines/**").authenticated()
+                                .requestMatchers("/inbound/transactions/**").authenticated()
+                                .requestMatchers("/outbound/transactions/**").authenticated()
                                 .anyRequest().permitAll()
                 )
-                // add headers setting to allow h2-console UI
-                .headers(httpSecurityHeadersConfigurer ->
-                        httpSecurityHeadersConfigurer.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
                 // add this for jwt
                 .sessionManagement(conf -> conf.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider)
+                .exceptionHandling(exceptions -> exceptions.accessDeniedHandler(customAccessDeniedHandler()))
                 // add jwt before the username password filter
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 // Disable CSRF for simplicity
                 .csrf(AbstractHttpConfigurer::disable);
         return http.build();
     }
+    @Bean
+    public AccessDeniedHandler customAccessDeniedHandler() {
+        return new CustomAccessDeniedHandler();
+    }
+
+    @Bean
+    public AuthenticationEntryPoint customAuthenticationEntryPoint() {
+        return new CustomAuthenticationEntryPoint();
+    }
 
 }
+

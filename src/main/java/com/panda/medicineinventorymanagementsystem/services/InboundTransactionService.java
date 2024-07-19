@@ -3,6 +3,7 @@ package com.panda.medicineinventorymanagementsystem.services;
 import com.panda.medicineinventorymanagementsystem.dto.InboundTransactionDTO;
 import com.panda.medicineinventorymanagementsystem.entity.InboundTransaction;
 import com.panda.medicineinventorymanagementsystem.entity.Medicine;
+import com.panda.medicineinventorymanagementsystem.entity.User;
 import com.panda.medicineinventorymanagementsystem.mapper.InboundTransactionMapper;
 import com.panda.medicineinventorymanagementsystem.repository.InboundTransactionRepository;
 import com.panda.medicineinventorymanagementsystem.repository.MedicineRepository;
@@ -23,6 +24,7 @@ public class InboundTransactionService {
     private final InboundTransactionRepository inboundTransactionRepository;
     private final MedicineRepository medicineRepository;
     private final InboundTransactionMapper inboundTransactionMapper;
+    private final UserService userService;
 
     /**
      * Constructor for InboundTransactionService with dependency injection.
@@ -31,10 +33,11 @@ public class InboundTransactionService {
      * @param medicineRepository           repository for accessing medicine data
      */
     @Autowired
-    public InboundTransactionService(InboundTransactionRepository inboundTransactionRepository, MedicineRepository medicineRepository, InboundTransactionMapper inboundTransactionMapper) {
+    public InboundTransactionService(InboundTransactionRepository inboundTransactionRepository, MedicineRepository medicineRepository, InboundTransactionMapper inboundTransactionMapper,UserService userService) {
         this.inboundTransactionRepository = inboundTransactionRepository;
         this.medicineRepository = medicineRepository;
         this.inboundTransactionMapper = inboundTransactionMapper;
+        this.userService = userService;
     }
 
     /**
@@ -47,15 +50,17 @@ public class InboundTransactionService {
      */
     @Transactional
     public List<InboundTransaction> addInboundTransactions(List<InboundTransactionDTO> transactionsDTO) {
+        Map<Integer, User> userMap = new HashMap<>();
+        User currentUser = userService.getCurrentAuthenticatedUser();
         // Extract IDs and check if all medicines exist
         Set<Integer> medicineIds = transactionsDTO.stream()
                 .map(InboundTransactionDTO::getMedicineId)
                 .collect(Collectors.toSet());
+
         // Fetch corresponding medicines from the database and store them in a map for quick access
         Map<Integer, Medicine> medicines = medicineRepository.findAllById(medicineIds)
                 .stream()
                 .collect(Collectors.toMap(Medicine::getId, Function.identity()));
-
 
         // Check if all medicines are found, and find the missing id
         Set<Integer> foundIds = medicines.keySet();
@@ -67,7 +72,15 @@ public class InboundTransactionService {
 
         // All medicines exist, convert DTOs to entities
         List<InboundTransaction> transactions = transactionsDTO.stream()
-                .map(dto -> inboundTransactionMapper.toEntity(dto, medicines))
+                .map(dto -> {
+                    Medicine medicine = medicines.get(dto.getMedicineId());
+                    if (medicine == null) {
+                        throw new EntityNotFoundException("Medicine not found for ID: " + dto.getMedicineId());
+                    }
+                    InboundTransaction transaction = inboundTransactionMapper.toEntity(dto, medicines,userMap);
+                    transaction.setUser(currentUser);
+                    return transaction;
+                })
                 .collect(Collectors.toList());
 
         // Process each transaction to update the medicine quantity and validate the transaction
@@ -96,7 +109,8 @@ public class InboundTransactionService {
      * @return Page containing outbound transactions.
      */
     public Page<InboundTransaction> getAllInboundTransactions(Pageable pageable) {
-        return inboundTransactionRepository.findAll(pageable);
+        User currentUser = userService.getCurrentAuthenticatedUser();
+        return inboundTransactionRepository.findAllByUser(currentUser, pageable);
     }
 
 
@@ -108,23 +122,9 @@ public class InboundTransactionService {
      * @throws EntityNotFoundException if the transaction is not found.
      */
     public InboundTransaction getInboundTransactionById(Integer id) {
-        return inboundTransactionRepository.findById(id)
+        User currentUser = userService.getCurrentAuthenticatedUser();
+        return inboundTransactionRepository.findByIdAndUser(id, currentUser)
                 .orElseThrow(() -> new EntityNotFoundException("Inbound transaction not found with ID: " + id));
-    }
-
-    /**
-     * Retrieves all inbound transactions associated with a specific medicine ID.
-     *
-     * @param medicineId The ID of the medicine to find transactions for.
-     * @return List of InboundTransaction entities.
-     * @throws EntityNotFoundException if no transactions are found for the given medicine ID.
-     */
-    public List<InboundTransaction> getTransactionsByMedicineId(Integer medicineId) {
-        List<InboundTransaction> transactions = inboundTransactionRepository.findByMedicineId(medicineId);
-        if (transactions.isEmpty()) {
-            throw new EntityNotFoundException("No inbound transactions found for medicine ID: " + medicineId);
-        }
-        return transactions;
     }
 
 }

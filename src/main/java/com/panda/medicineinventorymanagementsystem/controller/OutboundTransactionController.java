@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -52,6 +53,7 @@ public class OutboundTransactionController {
             })),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json"))
     })
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<OutboundTransactionDTO>> createOutboundTransactions(@Valid @RequestBody List<OutboundTransactionDTO> transactionsDTO){
         List<OutboundTransaction> transactions = outboundTransactionService.addOutboundTransactions(transactionsDTO);
         List<OutboundTransactionDTO> transactionDTOs = transactions.stream()
@@ -67,6 +69,7 @@ public class OutboundTransactionController {
     @ApiResponse(responseCode = "400", description = "Bad Request. If sort parameters are incorrect or not present in OutboundTransactionDTO.", content = @Content(mediaType = "application/json", examples = {
             @ExampleObject(name = "Sort Parameter Error", value = "{\"error\": \"Invalid sort parameter: The sort parameter must be a valid field of InboundTransactionDTO.\"}")
     }))
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<OutboundTransaction>> getAllOutboundTransactions(Pageable pageable) {
         Page<OutboundTransaction> page = outboundTransactionService.getAllOutboundTransactions(pageable);
         return ResponseEntity.ok(page);
@@ -78,20 +81,9 @@ public class OutboundTransactionController {
     @ApiResponse(responseCode = "404", description = "Transaction not found", content = @Content(mediaType = "application/json", examples = {
             @ExampleObject(name = "Medicine Not Found", value = "{\"error\": \"Transaction with ID [id] not found\"}")
     }))
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<OutboundTransaction> getOutboundTransactionById(@PathVariable Integer id) {
         OutboundTransaction transaction = outboundTransactionService.getOutboundTransactionById(id);
         return ResponseEntity.ok(transaction);
     }
-
-    @GetMapping("/by-medicine/{medicineId}")
-    @Operation(summary = "Get transactions by medicine ID", description = "Retrieve all transactions related to a specific medicine.")
-    @ApiResponse(responseCode = "200", description = "Transactions retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = List.class)))
-    @ApiResponse(responseCode = "404", description = "No transactions found for the medicine ID", content = @Content(mediaType = "application/json", examples = {
-            @ExampleObject(name = "Medicine Not Found", value = "{\"error\": \"Medicine with ID [id] not found\"}")
-    }))
-    public ResponseEntity<List<OutboundTransaction>> getTransactionsByMedicineId(@PathVariable Integer medicineId) {
-        List<OutboundTransaction> transactions = outboundTransactionService.getTransactionsByMedicineId(medicineId);
-        return ResponseEntity.ok(transactions);
-    }
-
 }
