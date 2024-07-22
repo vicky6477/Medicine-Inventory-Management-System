@@ -16,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/inbound/transactions")
+@Validated
 public class InboundTransactionController {
     private final InboundTransactionService inboundTransactionService;
     private final InboundTransactionMapper inboundTransactionMapper;
@@ -35,6 +37,8 @@ public class InboundTransactionController {
     }
 
     @PostMapping
+    @PreAuthorize("isAuthenticated()")
+    @Validated
     @Operation(summary = "Add new inbound transactions", description = "Create new inbound transactions in the database.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Transactions created successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = InboundTransaction.class))),
@@ -48,7 +52,6 @@ public class InboundTransactionController {
             })),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json"))
     })
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<InboundTransactionDTO>> createInboundTransactions(@Valid @RequestBody List<InboundTransactionDTO> transactionsDTO) {
         System.out.println("createInboundTransactions method called!");
         List<InboundTransaction> transactions = inboundTransactionService.addInboundTransactions(transactionsDTO);
@@ -57,6 +60,8 @@ public class InboundTransactionController {
                 .collect(Collectors.toList());
         return ResponseEntity.ok(transactionDTOs);
     }
+
+
     @GetMapping
     @Operation(summary = "List all inbound transactions", description = "Retrieve a paginated list of all inbound transactions in the system.")
     @ApiResponse(responseCode = "200", description = "Retrieve transactions successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Page.class)))
@@ -68,6 +73,7 @@ public class InboundTransactionController {
         Page<InboundTransactionDTO> dtoPage = page.map(inboundTransactionMapper::toDTO);
         return ResponseEntity.ok(dtoPage);
     }
+
 
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
