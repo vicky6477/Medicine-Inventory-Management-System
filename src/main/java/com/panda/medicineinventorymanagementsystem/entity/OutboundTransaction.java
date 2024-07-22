@@ -35,6 +35,10 @@ public class OutboundTransaction {
     @Column(name = "dispatched_date", nullable = false)
     private Date dispatcheddDate;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "user_id")
+    private User user;
+
     @PrePersist
     protected void onCreate() {
         dispatcheddDate = new Date();

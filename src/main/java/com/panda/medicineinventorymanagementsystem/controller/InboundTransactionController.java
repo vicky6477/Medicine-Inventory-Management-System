@@ -4,7 +4,6 @@ import com.panda.medicineinventorymanagementsystem.dto.InboundTransactionDTO;
 import com.panda.medicineinventorymanagementsystem.entity.InboundTransaction;
 import com.panda.medicineinventorymanagementsystem.mapper.InboundTransactionMapper;
 import com.panda.medicineinventorymanagementsystem.services.InboundTransactionService;
-import com.panda.medicineinventorymanagementsystem.util.ControllerHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -15,13 +14,11 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.BindingResult;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -34,6 +31,7 @@ public class InboundTransactionController {
     public InboundTransactionController(InboundTransactionService inboundTransactionService, InboundTransactionMapper inboundTransactionMapper) {
         this.inboundTransactionService = inboundTransactionService;
         this.inboundTransactionMapper = inboundTransactionMapper;
+        System.out.println("InboundTransactionController loaded successfully!");
     }
 
     @PostMapping
@@ -50,28 +48,15 @@ public class InboundTransactionController {
             })),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json"))
     })
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<InboundTransactionDTO>> createInboundTransactions(@Valid @RequestBody List<InboundTransactionDTO> transactionsDTO) {
+        System.out.println("createInboundTransactions method called!");
         List<InboundTransaction> transactions = inboundTransactionService.addInboundTransactions(transactionsDTO);
         List<InboundTransactionDTO> transactionDTOs = transactions.stream()
                 .map(inboundTransactionMapper::toDTO)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(transactionDTOs);
     }
-//    public ResponseEntity<?> createInboundTransactions(@Valid @RequestBody List<InboundTransactionDTO> transactionsDTO, BindingResult bindingResult) {
-//        if (bindingResult.hasErrors()) {
-//            Map<String, String> errors = ControllerHelper.formatBindingErrors(bindingResult);
-//            return ResponseEntity.badRequest().body(errors);
-//        }
-//        try {
-//            List<InboundTransaction> transactions = inboundTransactionService.addInboundTransactions(transactionsDTO);
-//            List<InboundTransactionDTO> transactionDTOs = transactions.stream()
-//                    .map(inboundTransactionMapper::toDTO)
-//                    .collect(Collectors.toList());
-//            return ResponseEntity.ok(transactionDTOs);
-//        } catch (RuntimeException e) {
-//            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-//        }
-//    }
     @GetMapping
     @Operation(summary = "List all inbound transactions", description = "Retrieve a paginated list of all inbound transactions in the system.")
     @ApiResponse(responseCode = "200", description = "Retrieve transactions successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Page.class)))
@@ -85,6 +70,7 @@ public class InboundTransactionController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get a specific inbound transaction", description = "Retrieve a specific inbound transaction by its ID.")
     public ResponseEntity<InboundTransactionDTO> getInboundTransactionById(@PathVariable Integer id) {
         InboundTransaction transaction = inboundTransactionService.getInboundTransactionById(id);
@@ -92,13 +78,4 @@ public class InboundTransactionController {
         return ResponseEntity.ok(dto);
     }
 
-    @GetMapping("/by-medicine/{medicineId}")
-    @Operation(summary = "Get transactions by medicine ID", description = "Retrieve all transactions related to a specific medicine.")
-    public ResponseEntity<List<InboundTransactionDTO>> getTransactionsByMedicineId(@PathVariable Integer medicineId) {
-        List<InboundTransaction> transactions = inboundTransactionService.getTransactionsByMedicineId(medicineId);
-        List<InboundTransactionDTO> transactionDTOs = transactions.stream()
-                .map(inboundTransactionMapper::toDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(transactionDTOs);
-    }
 }

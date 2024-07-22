@@ -2,6 +2,7 @@ package com.panda.medicineinventorymanagementsystem.services;
 import com.panda.medicineinventorymanagementsystem.dto.OutboundTransactionDTO;
 import com.panda.medicineinventorymanagementsystem.entity.Medicine;
 import com.panda.medicineinventorymanagementsystem.entity.OutboundTransaction;
+import com.panda.medicineinventorymanagementsystem.entity.User;
 import com.panda.medicineinventorymanagementsystem.mapper.OutboundTransactionMapper;
 import com.panda.medicineinventorymanagementsystem.repository.MedicineRepository;
 import com.panda.medicineinventorymanagementsystem.repository.OutboundTransactionRepository;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,6 +25,7 @@ public class OutboundTransactionService {
     private final OutboundTransactionRepository outboundTransactionRepository;
     private final MedicineRepository medicineRepository;
     private final OutboundTransactionMapper outboundTransactionMapper;
+    private final UserService userService;
 
     /**
      * Constructor for OutboundTransactionService with dependency injection.
@@ -30,10 +33,11 @@ public class OutboundTransactionService {
      * @param medicineRepository Repository for accessing medicine data.
      */
     @Autowired
-    public OutboundTransactionService(OutboundTransactionRepository outboundTransactionRepository, MedicineRepository medicineRepository, OutboundTransactionMapper outboundTransactionMapper) {
+    public OutboundTransactionService(OutboundTransactionRepository outboundTransactionRepository, MedicineRepository medicineRepository, OutboundTransactionMapper outboundTransactionMapper, UserService userService) {
         this.outboundTransactionRepository = outboundTransactionRepository;
         this.medicineRepository = medicineRepository;
         this.outboundTransactionMapper = outboundTransactionMapper;
+        this.userService = userService;
     }
 
 
@@ -48,6 +52,8 @@ public class OutboundTransactionService {
      */
     @Transactional
     public List<OutboundTransaction> addOutboundTransactions(List<OutboundTransactionDTO> transactionsDTO) {
+        Map<Integer, User> userMap = new HashMap<>();
+        User currentUser = userService.getCurrentAuthenticatedUser();
         // Extract medicine IDs from DTOs
         Set<Integer> medicineIds = transactionsDTO.stream()
                 .map(OutboundTransactionDTO::getMedicineId)
@@ -67,7 +73,15 @@ public class OutboundTransactionService {
 
         // All medicines exist, convert DTOs to entities
         List<OutboundTransaction> transactions = transactionsDTO.stream()
-                .map(dto -> outboundTransactionMapper.toEntity(dto, medicines))
+                .map(dto -> {
+                    Medicine medicine = medicines.get(dto.getMedicineId());
+                    if (medicine == null) {
+                        throw new EntityNotFoundException("Medicine not found for ID: " + dto.getMedicineId());
+                    }
+                    OutboundTransaction transaction = outboundTransactionMapper.toEntity(dto, medicines,userMap);
+                    transaction.setUser(currentUser);
+                    return transaction;
+                })
                 .collect(Collectors.toList());
 
         // Process each transaction to update the medicine quantity and validate the transaction
@@ -101,7 +115,8 @@ public class OutboundTransactionService {
      * @return Page containing outbound transactions.
      */
     public Page<OutboundTransaction> getAllOutboundTransactions(Pageable pageable) {
-        return outboundTransactionRepository.findAll(pageable);
+        User currentUser = userService.getCurrentAuthenticatedUser();
+        return outboundTransactionRepository.findAllByUser(currentUser, pageable);
     }
 
     /**
@@ -112,23 +127,9 @@ public class OutboundTransactionService {
      * @throws EntityNotFoundException if the transaction is not found.
      */
     public OutboundTransaction getOutboundTransactionById(Integer id) {
-        return outboundTransactionRepository.findById(id)
+        User currentUser = userService.getCurrentAuthenticatedUser();
+        return outboundTransactionRepository.findByIdAndUser(id,currentUser)
                 .orElseThrow(() -> new EntityNotFoundException("Outbound transaction not found with ID: " + id));
     }
 
-
-    /**
-     * Retrieves all outbound transactions associated with a specific medicine ID.
-     *
-     * @param medicineId The ID of the medicine to find transactions for.
-     * @return List of OutboundTransaction entities.
-     * @throws EntityNotFoundException if no transactions are found for the given medicine ID.
-     */
-    public List<OutboundTransaction> getTransactionsByMedicineId(Integer medicineId) {
-        List<OutboundTransaction> transactions = outboundTransactionRepository.findByMedicineId(medicineId);
-        if (transactions.isEmpty()) {
-            throw new EntityNotFoundException("No outbound transactions found for medicine ID: " + medicineId);
-        }
-        return transactions;
-    }
 }

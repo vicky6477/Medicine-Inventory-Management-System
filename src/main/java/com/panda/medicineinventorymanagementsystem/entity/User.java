@@ -1,12 +1,17 @@
 package com.panda.medicineinventorymanagementsystem.entity;
-import com.fasterxml.jackson.annotation.JsonFormat;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -14,49 +19,76 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Data
 @Builder
-public class User {
+public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column
     private Integer id;
 
-    @Column(nullable = false)
-    private String username;
+    private String name;
 
-    @Column(nullable = false)
+    @Column(unique=true)
     private String email;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Role role;
-
-    @Column(nullable = false)
     private String password;
+
+    @Enumerated(EnumType.STRING) // tell spring. ORDINAL: 0, 1, 2... / String : String value of enum
+    private Role role = Role.USER;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
 
-    @Column(nullable = false)
-    private String name;
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of(new SimpleGrantedAuthority(role.name()));
+    }
 
-    @Column(nullable = false)
-    private Integer age;
+    @Override
+    public String getUsername() {
+        return email;
+    }
 
-    @Column(nullable = false)
-    private String gender;
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return true;
+    }
 
     @PrePersist
     protected void onCreate() {
-        if (this.createdAt == null) {  // Set createdAt only if it's not already set
+        if (this.createdAt == null) {
             this.createdAt = LocalDateTime.now();
         }
-        this.updatedAt = LocalDateTime.now();  // Initialize updatedAt at creation time as well
+        this.updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public User(Integer id, String name, String email, String password, Role role) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.password = password;
+        this.role = role;
+        this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
 

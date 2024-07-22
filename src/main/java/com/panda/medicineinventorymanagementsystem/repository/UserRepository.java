@@ -4,9 +4,11 @@ import com.panda.medicineinventorymanagementsystem.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface UserRepository extends JpaRepository<User, Integer> {
-    // Define a method to check if an email already exists in the database
+    Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
 }
 

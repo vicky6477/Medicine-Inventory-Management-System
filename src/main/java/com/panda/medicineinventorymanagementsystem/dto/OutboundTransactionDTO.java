@@ -19,6 +19,8 @@ public class OutboundTransactionDTO {
     @NotNull(message = "Medicine ID cannot be null")
     private Integer medicineId;
 
+    private Integer userId;
+
     @Min(value = 1, message = "Quantity must be at least 1")
     private Integer quantity;
 
