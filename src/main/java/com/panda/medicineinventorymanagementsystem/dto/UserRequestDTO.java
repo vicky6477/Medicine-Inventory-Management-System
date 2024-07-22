@@ -19,7 +19,6 @@ public class UserRequestDTO {
     private String name;
 
     @NotBlank(message = "Email is required")
-    @Column(unique = true)
     @Email(message = "Email should be valid")
     private String email;
 

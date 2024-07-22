@@ -1,4 +1,5 @@
 package com.panda.medicineinventorymanagementsystem.controller;
+import com.panda.medicineinventorymanagementsystem.dto.InboundTransactionDTO;
 import com.panda.medicineinventorymanagementsystem.dto.OutboundTransactionDTO;
 import com.panda.medicineinventorymanagementsystem.entity.InboundTransaction;
 import com.panda.medicineinventorymanagementsystem.entity.OutboundTransaction;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/outbound/transactions")
+@Validated
 @Slf4j
 public class OutboundTransactionController {
     private final OutboundTransactionService outboundTransactionService;
@@ -54,6 +56,7 @@ public class OutboundTransactionController {
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json"))
     })
     @PreAuthorize("isAuthenticated()")
+    @Validated
     public ResponseEntity<List<OutboundTransactionDTO>> createOutboundTransactions(@Valid @RequestBody List<OutboundTransactionDTO> transactionsDTO){
         List<OutboundTransaction> transactions = outboundTransactionService.addOutboundTransactions(transactionsDTO);
         List<OutboundTransactionDTO> transactionDTOs = transactions.stream()
@@ -70,9 +73,10 @@ public class OutboundTransactionController {
             @ExampleObject(name = "Sort Parameter Error", value = "{\"error\": \"Invalid sort parameter: The sort parameter must be a valid field of InboundTransactionDTO.\"}")
     }))
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Page<OutboundTransaction>> getAllOutboundTransactions(Pageable pageable) {
+    public ResponseEntity<Page<OutboundTransactionDTO>> getAllOutboundTransactions(Pageable pageable) {
         Page<OutboundTransaction> page = outboundTransactionService.getAllOutboundTransactions(pageable);
-        return ResponseEntity.ok(page);
+        Page<OutboundTransactionDTO> dtoPage = page.map(outboundTransactionMapper::toDTO);
+        return ResponseEntity.ok(dtoPage);
     }
 
     @GetMapping("/{id}")
@@ -82,8 +86,9 @@ public class OutboundTransactionController {
             @ExampleObject(name = "Medicine Not Found", value = "{\"error\": \"Transaction with ID [id] not found\"}")
     }))
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<OutboundTransaction> getOutboundTransactionById(@PathVariable Integer id) {
+    public ResponseEntity<OutboundTransactionDTO> getOutboundTransactionById(@PathVariable Integer id) {
         OutboundTransaction transaction = outboundTransactionService.getOutboundTransactionById(id);
-        return ResponseEntity.ok(transaction);
+        OutboundTransactionDTO dto = outboundTransactionMapper.toDTO(transaction);
+        return ResponseEntity.ok(dto);
     }
 }

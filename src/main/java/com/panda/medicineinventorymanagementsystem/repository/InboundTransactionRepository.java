@@ -15,5 +15,4 @@ public interface InboundTransactionRepository  extends JpaRepository<InboundTran
     Optional<InboundTransaction> findByIdAndUser(Integer id, User user);
     Page<InboundTransaction> findAllByUser(User user, Pageable pageable);
 
-
 }

@@ -1,5 +1,6 @@
 package com.panda.medicineinventorymanagementsystem.services;
 import com.panda.medicineinventorymanagementsystem.dto.OutboundTransactionDTO;
+import com.panda.medicineinventorymanagementsystem.entity.InboundTransaction;
 import com.panda.medicineinventorymanagementsystem.entity.Medicine;
 import com.panda.medicineinventorymanagementsystem.entity.OutboundTransaction;
 import com.panda.medicineinventorymanagementsystem.entity.User;

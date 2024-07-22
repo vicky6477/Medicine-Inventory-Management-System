@@ -1,12 +1,14 @@
 package com.panda.medicineinventorymanagementsystem.aop;
 
+import com.panda.medicineinventorymanagementsystem.exception.IncorrectPasswordException;
 import com.panda.medicineinventorymanagementsystem.exception.MedicineAlreadyExistsException;
+import com.panda.medicineinventorymanagementsystem.exception.UserNameAlreadyExistsException;
+import com.panda.medicineinventorymanagementsystem.exception.UserNotFoundException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -83,14 +85,28 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(MedicineAlreadyExistsException.class)
-    public ResponseEntity<Map<String, String>> handleMedicineAlreadyExistsException(MedicineAlreadyExistsException ex, WebRequest webRequest) {
+    @ExceptionHandler(IncorrectPasswordException.class)
+    public ResponseEntity<Map<String, String>> handleIncorrectPasswordException(IncorrectPasswordException ex) {
         Map<String, String> errors = new HashMap<>();
-        addCommonErrorDetails(errors, webRequest);
         errors.put("error", ex.getMessage());
-        log.error("Medicine already exists: {}", ex.getMessage());
-        return new ResponseEntity<>(errors, HttpStatus.CONFLICT);
+        return new ResponseEntity<>(errors, HttpStatus.UNAUTHORIZED);
     }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleUserNotFoundException(UserNotFoundException ex) {
+        Map<String, String> errors = new HashMap<>();
+        errors.put("message", ex.getMessage());
+        return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND);
+    }
+
+
+    @ExceptionHandler(UserNameAlreadyExistsException.class)
+    public ResponseEntity<Map<String, String>> handleUserAlreadyExists(UserNameAlreadyExistsException ex, WebRequest request) {
+        Map<String, String> errors = new HashMap<>();
+        errors.put("email", ex.getMessage());
+        return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+    }
+
 
     private void addCommonErrorDetails(Map<String, String> errors, WebRequest webRequest) {
         errors.put("path", webRequest.getContextPath());
